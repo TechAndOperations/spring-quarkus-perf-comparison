@@ -13,8 +13,9 @@ Performance benchmarking suite comparing Spring Boot and Quarkus frameworks. The
 | `quarkus3/` | Quarkus 3.x (3.32.x) | RESTEasy, Hibernate ORM Panache |
 | `quarkus3-virtual/` | Quarkus 3.x | Virtual threads variant |
 | `quarkus3-spring-compatibility/` | Quarkus 3.x | Uses Quarkus Spring compatibility layer |
+| `nestjs11/` | NestJS 11 (Node.js) | TypeScript + TypeORM; not a Maven module |
 
-All modules share the same domain: `org.acme` package with Fruit/Store/Address entities, DTOs, mappers, and a REST controller.
+All JVM modules share the same domain: `org.acme` package with Fruit/Store/Address entities, DTOs, mappers, and a REST controller. `nestjs11/` mirrors that structure in TypeScript (`src/domain`, `src/dto`, `src/mapping`, ...).
 
 ## Build
 
@@ -27,6 +28,12 @@ All modules share the same domain: `org.acme` package with Fruit/Store/Address e
 - Maven wrapper included (`./mvnw`)
 - Parent POM is an aggregator only (no shared dependencies)
 - Each module manages its own dependencies independently
+
+`nestjs11/` is built separately with npm (Node.js 22+), not Maven:
+
+```sh
+cd nestjs11 && npm ci && npm run build   # tsc -> dist/, then assembles build/
+```
 
 ## Key Technologies
 
@@ -61,6 +68,7 @@ Located in `scripts/`:
 ## Conventions
 
 - Application code must maintain parity across all modules (same domain, same endpoints, same behavior)
+- `openapi.yml` at the repo root is the canonical REST contract that every module must conform to
 - Changes to architecture (e.g., virtual threads) must be applied to all modules
 - Config files use YAML (`application.yml`) in all modules
 - `.gitignore` excludes `target/`, IDE files, and `.claude/`

@@ -26,7 +26,10 @@ states:
 
   config.jvm.memory: #-Xmx128m
   config.jvm.args: -XX:+UseParallelGC #-XX:+UseNUMA
-  config.quarkus.build_config_args: 
+  config.quarkus.build_config_args:
+
+  # Runtime args for Node.js runtimes. --max-old-space-size is the closest analogue of -Xmx.
+  config.node.args: --max-old-space-size=512
 
   config.quarkus.native_build_options: #-Dquarkus.native.native-image-xmx=<maximum_memory>
   config.springboot3.native_build_options:
@@ -58,6 +61,7 @@ states:
   PAUSE_TIME: 5
   PROFILER_JVM_ARGS:
   BASE_JAVA_CMD: ${{APP_CMD_PREFIX}} java ${{config.jvm.memory}} ${{config.jvm.args}} ${{PROFILER_JVM_ARGS}}
+  BASE_NODE_CMD: ${{APP_CMD_PREFIX}} node ${{config.node.args}}
   TESTS : [measure-time-to-first-request, measure-rss, run-load-test]
   RUNTIMES: [quarkus3-jvm, quarkus3-virtual, quarkus3-native, spring3-jvm, spring3-virtual, spring3-native, spring4-jvm, spring4-virtual, spring4-native]
   TARGET_URL: http://localhost:8080/fruits
@@ -219,6 +223,18 @@ states:
       buildCmd: "${{APP_CMD_PREFIX}} ./mvnw clean -Pnative -DskipTests native:compile package ${{config.springboot4.native_build_options}}"
       runCmd: "${{APP_CMD_PREFIX}} ${{RUNTIME_BUILD_DIR}}/springboot4 ${{config.jvm.memory}}"
       logFileStartedRegex: ".*Started SpringBoot4Application in.+seconds.*"
+    # Node.js runtimes have no Maven build, so they set buildOutputDir (npm run build assembles a
+    # self-contained build/ directory) and use an updateScript that prefetches with npm instead.
+    - name: nestjs11-node
+      type: node
+      dir: ${{NESTJS11_DIR}}
+      updateScript: update-node-version
+      updateVersion:
+      buildRequiresTestServices: false
+      buildOutputDir: build
+      buildCmd: "${{APP_CMD_PREFIX}} npm run build"
+      runCmd: "${{BASE_NODE_CMD}} ${{RUNTIME_BUILD_DIR}}/dist/main.js"
+      logFileStartedRegex: ".*nestjs11.+started in.*"
 
 scripts:
   update-state:
@@ -234,6 +250,7 @@ scripts:
     - set-state: RUN.SPRING4_BOOT_DIR ${{PROJ_REPO_DIR}}/springboot4
     - set-state: RUN.QUARKUS3_DIR ${{PROJ_REPO_DIR}}/quarkus3
     - set-state: RUN.QUARKUS3_VIRTUAL_DIR ${{PROJ_REPO_DIR}}/quarkus3-virtual
+    - set-state: RUN.NESTJS11_DIR ${{PROJ_REPO_DIR}}/nestjs11
     - set-state: RUN.BUILDS_DIR ${{PROJ_REPO_DIR}}/builds
     - set-state: RUN.ASYNC_PROFILER_DIR ${{BASE_DIR}}/${{ASYNC_PROFILER}}
 
@@ -310,17 +327,17 @@ scripts:
       with:
         DIR: ${{RUNTIMECMD.dir}}
         VERSION: ${{RUNTIMECMD.updateVersion:}}
-    - log: "Downloading dependencies for ${{RUNTIMECMD.updateVersion:}}"
-    # Pre-download dependencies to exclude it from build time
-    # also to ensure any dependency resolution issues are caught before we start measuring build times
-    - sh: ./mvnw dependency:go-offline
+    # Dependencies are pre-downloaded by the runtime's updateScript, to exclude that from build
+    # time and to catch any dependency resolution issues before we start measuring build times.
+    # It lives there rather than here because the command is toolchain-specific (mvnw vs npm).
 
   build-and-cache-runtime:
     - script: measure-build-times
       with:
         RUNTIMECMD: ${{RUNTIMECMD}}
     - sh: rm -rf ${{BUILDS_DIR}}/${{RUNTIMECMD.name}}
-    - sh: cp -a ${{RUNTIMECMD.dir}}/target ${{BUILDS_DIR}}/${{RUNTIMECMD.name}}
+    # buildOutputDir defaults to Maven's target/; Node.js runtimes override it.
+    - sh: cp -a ${{RUNTIMECMD.dir}}/${{RUNTIMECMD.buildOutputDir:target}} ${{BUILDS_DIR}}/${{RUNTIMECMD.name}}
 
   run-tests-for-runtime:
     - log: "Testing: ${{RUNTIMECMD.name}}"
@@ -338,6 +355,8 @@ scripts:
         artifactId: spring-boot-starter-parent
         version: ${{VERSION}}
     - sh: ./mvnw versions:update-parent "-DparentVersion=[${{VERSION}}]" -DskipResolution=true
+    - log: "Downloading dependencies for ${{VERSION}}"
+    - sh: ./mvnw dependency:go-offline
 
   update-quarkus-version:
     - script: check-dependency-exists
@@ -346,6 +365,26 @@ scripts:
         artifactId: quarkus-bom
         version: ${{VERSION}}
     - sh: ./mvnw versions:set-property -Dproperty=quarkus.platform.version -DnewVersion=${{VERSION}}
+    - log: "Downloading dependencies for ${{VERSION}}"
+    - sh: ./mvnw dependency:go-offline
+
+  # Node.js runtimes pin their dependency versions in package-lock.json rather than taking a
+  # framework version from the command line, so there is nothing to update here. `npm ci`
+  # installs from the lockfile, keeping dependency resolution out of the measured build time.
+  update-node-version:
+    - log: "No framework version pinning for Node.js runtimes"
+    - sh: "[ -d ${{DIR}} ] && echo true || echo false"
+      then:
+        - regex: "false"
+          then:
+            - abort: "${{DIR}} does not exist in the checked-out repo. If the module is not committed/pushed yet, pass --repo-url <local path> so the run copies your working tree instead of cloning."
+    - sh: cd ${{DIR}}
+    - sh: "[ -f package-lock.json ] && echo true || echo false"
+      then:
+        - regex: "false"
+          then:
+            - abort: "package-lock.json is missing in ${{DIR}}. Run 'npm install' there and commit the lockfile - benchmark runs need reproducible dependency versions."
+    - sh: npm ci
 
   start-test-services:
     - sh: "${{PROJ_REPO_DIR}}/scripts/infra.sh -c 3 -l 3 -p '${{config.resources.cpu.db}}' -g '${{config.resources.cpu.otel}}' -s ${{= ${{config.run.useContainerHostNetwork:false}} ? '-n' : ''}}"
@@ -642,7 +681,8 @@ scripts:
               run@hyperfoil \
                 -d ${{RUNTIME_NAME}}-${{ITERATION}} \
                 -o ${{HYPERFOIL_LOGS_DIR}}/${{RUNTIME_NAME}}-${{ITERATION}} \
-                ${{LOAD_TESTS_SCRIPTS_DIR}}/load-test-fixed-threads-read-all.hf.yml &>${{REPO_DIR}}/logs/hf-${{RUNTIME_NAME}}-${{ITERATION}}.log &
+                ${{LOAD_TESTS_SCRIPTS_DIR}}/load-test-fixed-threads-read-all.hf.yml \
+                </dev/null &>${{REPO_DIR}}/logs/hf-${{RUNTIME_NAME}}-${{ITERATION}}.log &
         - sh: HF_PID=$! && echo $HF_PID
           then:
             - set-state: HF_PID

@@ -59,6 +59,8 @@ help() {
   echo "                                                              Default: ${JVM_ARGS}"
   echo "  --jvm-memory <JVM_MEMORY>                               JVM Memory setting (i.e. -Xmx -Xmn -Xms)"
   echo "                                                              Default: ${JVM_MEMORY}"
+  echo "  --node-args <NODE_ARGS>                                 Any runtime Node.js args to be passed to the Node.js apps"
+  echo "                                                              Default: ${NODE_ARGS}"
   echo "  --native-quarkus-build-options <NATIVE_QUARKUS_OPTS>    Native build options to be passed to Quarkus native build process"
   echo "  --native-spring3-build-options <NATIVE_SPRING3_OPTS>    Native build options to be passed to Spring 3.x native build process"
   echo "  --native-spring4-build-options <NATIVE_SPRING4_OPTS>    Native build options to be passed to Spring 4.x native build process"
@@ -77,7 +79,8 @@ help() {
   echo "  --repo-url <SCM_REPO_URL>                               The SCM repo url"
   echo "                                                              Default: '${SCM_REPO_URL}'"
   echo "  --runtimes <RUNTIMES>                                   The runtimes to test, separated by commas"
-  echo "                                                              Accepted values (1 or more of): quarkus3-jvm, quarkus3-leyden, quarkus3-virtual, quarkus3-virtual-leyden, quarkus3-native, spring3-jvm, spring3-leyden, spring3-virtual, spring3-virtual-leyden, spring3-jvm-aot, spring3-native, spring4-jvm, spring4-leyden, spring4-virtual, spring4-virtual-leyden, spring4-jvm-aot, spring4-native"
+  echo "                                                              Accepted values (1 or more of): quarkus3-jvm, quarkus3-leyden, quarkus3-virtual, quarkus3-virtual-leyden, quarkus3-native, spring3-jvm, spring3-leyden, spring3-virtual, spring3-virtual-leyden, spring3-jvm-aot, spring3-native, spring4-jvm, spring4-leyden, spring4-virtual, spring4-virtual-leyden, spring4-jvm-aot, spring4-native, nestjs11-node"
+  echo "                                                              NOTE: nestjs11-node is opt-in only - it is not part of the default runtimes"
   echo "                                                              Default: 'quarkus3-jvm,quarkus3-leyden,quarkus3-virtual,quarkus3-virtual-leyden,quarkus3-native,spring3-jvm,spring3-leyden,spring3-jvm-aot,spring3-virtual,spring3-virtual-leyden,spring3-native,spring4-jvm,spring4-leyden,spring4-virtual,spring4-virtual-leyden,spring4-jvm-aot,spring4-native'"
   echo "  --run-identifier <RUN_IDENTIFIER>                       An optional identifier for this run to be added to the run output"
   echo "  --scenario <SCENARIO>                                   The scenario to run"
@@ -166,6 +169,7 @@ print_values() {
   echo "  DROP_OS_FILESYSTEM_CACHES: $DROP_OS_FILESYSTEM_CACHES"
   echo "  USE_CONTAINER_HOST_NETWORK: $USE_CONTAINER_HOST_NETWORK"
   echo "  JVM_ARGS: $JVM_ARGS"
+  echo "  NODE_ARGS: $NODE_ARGS"
   echo "  EXTRA_QDUP_ARGS: $EXTRA_QDUP_ARGS"
   echo "  OUTPUT_DIR: $OUTPUT_DIR"
   echo "  DESCRIPTION: '${DESCRIPTION}'"
@@ -275,6 +279,7 @@ ${JBANG_CMD} io.hyperfoil.tools:qDup:0.11.2 \
     -S config.jvm.version=${JAVA_VERSION} \
     -S config.quarkus.native_build_options="${NATIVE_QUARKUS_BUILD_OPTIONS}" \
     -S config.jvm.args="${JVM_ARGS}" \
+    -S config.node.args="${NODE_ARGS}" \
     -S config.profiler.name=${PROFILER} \
     -S config.resources.app_cpus="$(count_cpus "${CPUS_APP}")" \
     -S config.resources.cpu.app="${CPUS_APP}" \
@@ -336,7 +341,9 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   PROFILER="none"
   QUARKUS_BUILD_CONFIG_ARGS=""
   QUARKUS_VERSION=""
-  ALLOWED_RUNTIMES=("quarkus3-jvm" "quarkus3-leyden" "quarkus3-virtual" "quarkus3-virtual-leyden" "quarkus3-native" "spring3-jvm" "spring3-leyden" "spring3-virtual" "spring3-virtual-leyden" "spring3-jvm-aot" "spring3-native" "spring4-jvm" "spring4-leyden" "spring4-virtual" "spring4-virtual-leyden" "spring4-jvm-aot" "spring4-native")
+  ALLOWED_RUNTIMES=("quarkus3-jvm" "quarkus3-leyden" "quarkus3-virtual" "quarkus3-virtual-leyden" "quarkus3-native" "spring3-jvm" "spring3-leyden" "spring3-virtual" "spring3-virtual-leyden" "spring3-jvm-aot" "spring3-native" "spring4-jvm" "spring4-leyden" "spring4-virtual" "spring4-virtual-leyden" "spring4-jvm-aot" "spring4-native" "nestjs11-node")
+  # NOTE: nestjs11-node is deliberately absent from DEFAULT_RUNTIMES. Adding a new runtime to the
+  # defaults would silently change the composition of every existing full-suite run.
   DEFAULT_RUNTIMES=("quarkus3-jvm" "quarkus3-leyden" "quarkus3-virtual" "quarkus3-virtual-leyden" "quarkus3-native" "spring3-jvm" "spring3-leyden" "spring3-virtual" "spring3-virtual-leyden" "spring3-native" "spring4-jvm" "spring4-leyden" "spring4-virtual" "spring4-virtual-leyden" "spring4-native")
   RUNTIMES=${DEFAULT_RUNTIMES[@]}
   SPRING_BOOT3_VERSION=""
@@ -350,6 +357,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   DROP_OS_FILESYSTEM_CACHES=false
   USE_CONTAINER_HOST_NETWORK=false
   JVM_ARGS="-XX:+UseParallelGC"
+  NODE_ARGS="--max-old-space-size=512"
   EXTRA_QDUP_ARGS=""
   OUTPUT_DIR="/tmp"
 
@@ -373,6 +381,11 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
 
       --jvm-args)
         JVM_ARGS="$2"
+        shift 2
+        ;;
+
+      --node-args)
+        NODE_ARGS="$2"
         shift 2
         ;;
 
