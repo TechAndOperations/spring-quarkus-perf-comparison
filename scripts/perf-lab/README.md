@@ -72,6 +72,7 @@ The script also has 3 dependencies that need to be resolved before it can be run
 | `--java-version` | `<JAVA_VERSION>` | The Java version to use (from SDKMAN)<br/>Ignored if `--java-home` is set | `25.0.3-tem` |
 | `--jvm-args` | `<JVM_ARGS>` | Any runtime JVM args to be passed to the apps | `-XX:+UseParallelGC` |
 | `--jvm-memory` | `<JVM_MEMORY>` | JVM Memory setting (i.e. -Xmx -Xmn -Xms) | `-Xms512m -Xmx512m` |
+| `--node-args` | `<NODE_ARGS>` | Any runtime Node.js args to be passed to the Node.js apps | `--max-old-space-size=512` |
 | `--native-quarkus-build-options` | `<NATIVE_QUARKUS_OPTS>` | Native build options to be passed to Quarkus native build process | |
 | `--native-spring3-build-options` | `<NATIVE_SPRING3_OPTS>` | Native build options to be passed to Spring 3.x native build process | |
 | `--native-spring4-build-options` | `<NATIVE_SPRING4_OPTS>` | Native build options to be passed to Spring 4.x native build process | |
@@ -81,7 +82,7 @@ The script also has 3 dependencies that need to be resolved before it can be run
 | `--quarkus-version` | `<QUARKUS_VERSION>` | The Quarkus version to use<br/>**NOTE:** Its a good practice to set this manually to ensure proper version | Whatever version is set in pom.xml of the Quarkus app |
 | `--repo-branch` | `<SCM_REPO_BRANCH>` | The branch in the SCM repo | `main` |
 | `--repo-url` | `<SCM_REPO_URL>` | The SCM repo url | `https://github.com/quarkusio/spring-quarkus-perf-comparison.git` |
-| `--runtimes` | `<RUNTIMES>` | The runtimes to test, separated by commas<br/>Accepted values (1 or more of): `quarkus3-jvm`, `quarkus3-leyden`, `quarkus3-virtual`, `quarkus3-virtual-leyden`, `quarkus3-native`, `spring3-jvm`, `spring3-leyden`, `spring3-virtual`, `spring3-virtual-leyden`, `spring3-jvm-aot`, `spring3-native`, `spring4-jvm`, `spring4-leyden`, `spring4-virtual`, `spring4-virtual-leyden`, `spring4-jvm-aot`, `spring4-native` | See [Available Runtimes](#available-runtimes) for defaults |
+| `--runtimes` | `<RUNTIMES>` | The runtimes to test, separated by commas<br/>Accepted values (1 or more of): `quarkus3-jvm`, `quarkus3-leyden`, `quarkus3-virtual`, `quarkus3-virtual-leyden`, `quarkus3-native`, `spring3-jvm`, `spring3-leyden`, `spring3-virtual`, `spring3-virtual-leyden`, `spring3-jvm-aot`, `spring3-native`, `spring4-jvm`, `spring4-leyden`, `spring4-virtual`, `spring4-virtual-leyden`, `spring4-jvm-aot`, `spring4-native`, `nestjs11-node` | See [Available Runtimes](#available-runtimes) for defaults |
 | `--run-identifier` | `<RUN_IDENTIFIER>` | An optional identifier for this run to be added to the run output | |
 | `--scenario` | `<SCENARIO>` | The scenario to run<br/>Accepted values: `tuned`, `ootb`<br/>`tuned` applies various performance tuning settings to the JVM and OS (generally from the `main` branch). `ootb` runs with out-of-the-box/default settings (generally from the `ootb` branch). | Depends on `--repo-branch`: `main` → `tuned`, `ootb` → `ootb`, anything else → `tuned` |
 | `--springboot3-version` | `<SPRING_BOOT3_VERSION>` | The Spring Boot 3.x version to use<br/>**NOTE:** Its a good practice to set this manually to ensure proper version | Whatever version is set in pom.xml of the Spring Boot 3 app |
@@ -240,8 +241,12 @@ The `--runtimes` option accepts one or more of the following values (comma-separ
 - `spring4-virtual-leyden` - [Spring Boot 4](../../springboot4) on JVM with virtual threads and [Project Leyden](https://openjdk.org/projects/leyden/) (CDS/AOT)
 - `spring4-jvm-aot` - [Spring Boot 4](../../springboot4) on JVM with Spring AOT compilation
 - `spring4-native` - [Spring Boot 4](../../springboot4) native executable
+- `nestjs11-node` - [NestJS 11](../../nestjs11) on Node.js
 
-**Default:** All runtimes except `spring3-jvm-aot` and `spring4-jvm-aot` are tested. To include AOT variants, pass them explicitly via `--runtimes`.
+**Default:** All runtimes except `spring3-jvm-aot`, `spring4-jvm-aot` and `nestjs11-node` are tested. To include the AOT variants or the Node.js runtime, pass them explicitly via `--runtimes`.
+
+> [!NOTE]
+> `nestjs11-node` requires Node.js and npm on the benchmark host. Unlike the JVM runtimes there is no framework version to pin, so `--quarkus-version`/`--springboot*-version` have no equivalent; dependency versions come from `nestjs11/package-lock.json`. Use `--node-args` to set runtime flags (the default `--max-old-space-size=512` is the analogue of the JVM runtimes' `-Xmx512m`). A single Node.js process only saturates one core, so its throughput is not directly comparable to the JVM runtimes at `--cpus-app` widths greater than 1 — see [nestjs11/README.md](../../nestjs11/README.md).
 
 ### Available Tests
 

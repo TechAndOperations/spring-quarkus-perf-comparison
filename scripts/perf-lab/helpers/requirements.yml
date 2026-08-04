@@ -6,7 +6,26 @@ scripts:
     - script: ensure-git
     - script: ensure-gcc
     - script: ensure-jbang
+    - script: ensure-node
     - script: ensure-jvm-opts
+
+  # Needed only by the Node.js runtimes. Note that install-package-linux uses dnf, so on
+  # Debian/Ubuntu hosts Node.js must already be installed - the `which node` check below then
+  # passes and nothing is installed.
+  ensure-node-linux:
+    - script: check-and-install-package
+      with:
+        command: node
+        package: nodejs npm
+
+  ensure-node-macos:
+    - script: check-and-install-package
+      with:
+        command: node
+        package: node
+
+  ensure-node:
+    - script: ensure-node-${{os}}
 
   ensure-jvm-opts:
     - read-state: config.profiler.name
