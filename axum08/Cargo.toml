@@ -1,0 +1,45 @@
+[package]
+name = "axum08"
+version = "1.0.0"
+edition = "2021"
+publish = false
+
+# Release profile tuned for a benchmark binary rather than iteration speed: full LTO and a single
+# codegen unit both raise build time (measured by the pipeline) in exchange for runtime speed.
+# panic = "abort" drops unwinding tables, shrinking the binary and RSS slightly; acceptable here
+# since this process is never embedded as a library and a panic should just kill the instance.
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
+
+[dependencies]
+axum = "0.8"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "signal"] }
+
+# Runtime-checked queries only (sqlx::query / query_as, never the query!/query_as! macros), so
+# `cargo build` never needs a live database connection - consistent with
+# `buildRequiresTestServices: false` for this runtime.
+# "macros" only enables #[derive(sqlx::FromRow)] here - the compile-time-checked query!/query_as!
+# bang-macros (which would need a live DB at `cargo build` time) are never used in this codebase.
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "tls-rustls", "postgres", "macros"] }
+
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Observability parity with quarkus3-virtual (quarkus-micrometer-opentelemetry: traces at
+# traceidratio 0.1, OTLP export). These four crates must stay on matching major versions - if
+# `cargo build` fails here on first use, bump all four together rather than one at a time.
+# See src/tracing_setup.rs and axum08/README.md ("OpenTelemetry - unverified").
+opentelemetry = "0.27"
+opentelemetry_sdk = { version = "0.27", features = ["rt-tokio"] }
+opentelemetry-otlp = { version = "0.27", features = ["grpc-tonic"] }
+tracing-opentelemetry = "0.28"
+
+[dev-dependencies]
+# default-features off + rustls-tls: avoids linking against system OpenSSL (native-tls), which
+# this host does not have development headers for.
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }

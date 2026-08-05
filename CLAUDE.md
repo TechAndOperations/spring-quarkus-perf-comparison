@@ -14,8 +14,9 @@ Performance benchmarking suite comparing Spring Boot and Quarkus frameworks. The
 | `quarkus3-virtual/` | Quarkus 3.x | Virtual threads variant |
 | `quarkus3-spring-compatibility/` | Quarkus 3.x | Uses Quarkus Spring compatibility layer |
 | `nestjs11/` | NestJS 11 (Node.js) | TypeScript + TypeORM; not a Maven module |
+| `axum08/` | Axum (Rust) | sqlx, raw SQL (no ORM); not a Maven module |
 
-All JVM modules share the same domain: `org.acme` package with Fruit/Store/Address entities, DTOs, mappers, and a REST controller. `nestjs11/` mirrors that structure in TypeScript (`src/domain`, `src/dto`, `src/mapping`, ...).
+All JVM modules share the same domain: `org.acme` package with Fruit/Store/Address entities, DTOs, mappers, and a REST controller. `nestjs11/` mirrors that structure in TypeScript (`src/domain`, `src/dto`, `src/mapping`, ...). `axum08/` mirrors the DTO/REST layers in Rust but has no `domain`/`mapping` split - see `axum08/README.md` ("Single query implementation, no ORM").
 
 ## Build
 
@@ -33,6 +34,12 @@ All JVM modules share the same domain: `org.acme` package with Fruit/Store/Addre
 
 ```sh
 cd nestjs11 && npm ci && npm run build   # tsc -> dist/, then assembles build/
+```
+
+`axum08/` is built separately with Cargo (a recent stable Rust toolchain), not Maven:
+
+```sh
+cd axum08 && cargo build --release   # binary at target/release/axum08
 ```
 
 ## Key Technologies
