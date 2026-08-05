@@ -82,7 +82,7 @@ The script also has 3 dependencies that need to be resolved before it can be run
 | `--quarkus-version` | `<QUARKUS_VERSION>` | The Quarkus version to use<br/>**NOTE:** Its a good practice to set this manually to ensure proper version | Whatever version is set in pom.xml of the Quarkus app |
 | `--repo-branch` | `<SCM_REPO_BRANCH>` | The branch in the SCM repo | `main` |
 | `--repo-url` | `<SCM_REPO_URL>` | The SCM repo url | `https://github.com/quarkusio/spring-quarkus-perf-comparison.git` |
-| `--runtimes` | `<RUNTIMES>` | The runtimes to test, separated by commas<br/>Accepted values (1 or more of): `quarkus3-jvm`, `quarkus3-leyden`, `quarkus3-virtual`, `quarkus3-virtual-leyden`, `quarkus3-native`, `spring3-jvm`, `spring3-leyden`, `spring3-virtual`, `spring3-virtual-leyden`, `spring3-jvm-aot`, `spring3-native`, `spring4-jvm`, `spring4-leyden`, `spring4-virtual`, `spring4-virtual-leyden`, `spring4-jvm-aot`, `spring4-native`, `nestjs11-node` | See [Available Runtimes](#available-runtimes) for defaults |
+| `--runtimes` | `<RUNTIMES>` | The runtimes to test, separated by commas<br/>Accepted values (1 or more of): `quarkus3-jvm`, `quarkus3-leyden`, `quarkus3-virtual`, `quarkus3-virtual-leyden`, `quarkus3-native`, `spring3-jvm`, `spring3-leyden`, `spring3-virtual`, `spring3-virtual-leyden`, `spring3-jvm-aot`, `spring3-native`, `spring4-jvm`, `spring4-leyden`, `spring4-virtual`, `spring4-virtual-leyden`, `spring4-jvm-aot`, `spring4-native`, `nestjs11-node`, `axum08-rust` | See [Available Runtimes](#available-runtimes) for defaults |
 | `--run-identifier` | `<RUN_IDENTIFIER>` | An optional identifier for this run to be added to the run output | |
 | `--scenario` | `<SCENARIO>` | The scenario to run<br/>Accepted values: `tuned`, `ootb`<br/>`tuned` applies various performance tuning settings to the JVM and OS (generally from the `main` branch). `ootb` runs with out-of-the-box/default settings (generally from the `ootb` branch). | Depends on `--repo-branch`: `main` → `tuned`, `ootb` → `ootb`, anything else → `tuned` |
 | `--springboot3-version` | `<SPRING_BOOT3_VERSION>` | The Spring Boot 3.x version to use<br/>**NOTE:** Its a good practice to set this manually to ensure proper version | Whatever version is set in pom.xml of the Spring Boot 3 app |
@@ -242,11 +242,15 @@ The `--runtimes` option accepts one or more of the following values (comma-separ
 - `spring4-jvm-aot` - [Spring Boot 4](../../springboot4) on JVM with Spring AOT compilation
 - `spring4-native` - [Spring Boot 4](../../springboot4) native executable
 - `nestjs11-node` - [NestJS 11](../../nestjs11) on Node.js
+- `axum08-rust` - [Axum](../../axum08) on Rust
 
-**Default:** All runtimes except `spring3-jvm-aot`, `spring4-jvm-aot` and `nestjs11-node` are tested. To include the AOT variants or the Node.js runtime, pass them explicitly via `--runtimes`.
+**Default:** All runtimes except `spring3-jvm-aot`, `spring4-jvm-aot`, `nestjs11-node` and `axum08-rust` are tested. To include the AOT variants, the Node.js runtime, or the Rust runtime, pass them explicitly via `--runtimes`.
 
 > [!NOTE]
 > `nestjs11-node` requires Node.js and npm on the benchmark host. Unlike the JVM runtimes there is no framework version to pin, so `--quarkus-version`/`--springboot*-version` have no equivalent; dependency versions come from `nestjs11/package-lock.json`. Use `--node-args` to set runtime flags (the default `--max-old-space-size=512` is the analogue of the JVM runtimes' `-Xmx512m`). A single Node.js process only saturates one core, so its throughput is not directly comparable to the JVM runtimes at `--cpus-app` widths greater than 1 — see [nestjs11/README.md](../../nestjs11/README.md).
+
+> [!NOTE]
+> `axum08-rust` requires a Rust toolchain (cargo/rustc) on the benchmark host. Same as `nestjs11-node`, there is no framework version to pin - dependency versions come from `axum08/Cargo.lock`. There is no equivalent of `--jvm-args`/`--node-args`: Rust binaries have no runtime flags analogous to `-Xmx`/`--max-old-space-size` to set. See [axum08/README.md](../../axum08/README.md) for the module's design notes.
 
 ### Available Tests
 

@@ -235,6 +235,18 @@ states:
       buildCmd: "${{APP_CMD_PREFIX}} npm run build"
       runCmd: "${{BASE_NODE_CMD}} ${{RUNTIME_BUILD_DIR}}/dist/main.js"
       logFileStartedRegex: ".*nestjs11.+started in.*"
+    # Rust runtimes have no framework version to pin either (dependency versions are pinned in
+    # Cargo.lock, not passed via CLI param). `cargo` names its output dir `target/`, same as
+    # Maven, so buildOutputDir needs no override here - only the binary path inside it differs.
+    - name: axum08-rust
+      type: rust
+      dir: ${{AXUM08_DIR}}
+      updateScript: update-rust-version
+      updateVersion:
+      buildRequiresTestServices: false
+      buildCmd: "${{APP_CMD_PREFIX}} cargo build --release"
+      runCmd: "${{APP_CMD_PREFIX}} ${{RUNTIME_BUILD_DIR}}/release/axum08"
+      logFileStartedRegex: ".*axum08.+started in.*"
 
 scripts:
   update-state:
@@ -251,6 +263,7 @@ scripts:
     - set-state: RUN.QUARKUS3_DIR ${{PROJ_REPO_DIR}}/quarkus3
     - set-state: RUN.QUARKUS3_VIRTUAL_DIR ${{PROJ_REPO_DIR}}/quarkus3-virtual
     - set-state: RUN.NESTJS11_DIR ${{PROJ_REPO_DIR}}/nestjs11
+    - set-state: RUN.AXUM08_DIR ${{PROJ_REPO_DIR}}/axum08
     - set-state: RUN.BUILDS_DIR ${{PROJ_REPO_DIR}}/builds
     - set-state: RUN.ASYNC_PROFILER_DIR ${{BASE_DIR}}/${{ASYNC_PROFILER}}
 
@@ -385,6 +398,25 @@ scripts:
           then:
             - abort: "package-lock.json is missing in ${{DIR}}. Run 'npm install' there and commit the lockfile - benchmark runs need reproducible dependency versions."
     - sh: npm ci
+
+  # Rust dependency versions are pinned in Cargo.lock, not passed via CLI param, so there is
+  # nothing to update here either. `cargo fetch` prefetches crates without building, keeping
+  # dependency resolution out of the measured build time - the Rust equivalent of
+  # `./mvnw dependency:go-offline` / `npm ci`.
+  update-rust-version:
+    - log: "No framework version pinning for Rust runtimes"
+    - sh: "[ -d ${{DIR}} ] && echo true || echo false"
+      then:
+        - regex: "false"
+          then:
+            - abort: "${{DIR}} does not exist in the checked-out repo. If the module is not committed/pushed yet, pass --repo-url <local path> so the run copies your working tree instead of cloning."
+    - sh: cd ${{DIR}}
+    - sh: "[ -f Cargo.lock ] && echo true || echo false"
+      then:
+        - regex: "false"
+          then:
+            - abort: "Cargo.lock is missing in ${{DIR}}. Run 'cargo build' there and commit the lockfile - benchmark runs need reproducible dependency versions."
+    - sh: cargo fetch --locked
 
   start-test-services:
     - sh: "${{PROJ_REPO_DIR}}/scripts/infra.sh -c 3 -l 3 -p '${{config.resources.cpu.db}}' -g '${{config.resources.cpu.otel}}' -s ${{= ${{config.run.useContainerHostNetwork:false}} ? '-n' : ''}}"

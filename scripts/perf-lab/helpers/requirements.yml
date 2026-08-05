@@ -7,6 +7,7 @@ scripts:
     - script: ensure-gcc
     - script: ensure-jbang
     - script: ensure-node
+    - script: ensure-rust
     - script: ensure-jvm-opts
 
   # Needed only by the Node.js runtimes. Note that install-package-linux uses dnf, so on
@@ -26,6 +27,22 @@ scripts:
 
   ensure-node:
     - script: ensure-node-${{os}}
+
+  # Needed only by the Rust runtimes. Same dnf-only caveat as ensure-node-linux above.
+  ensure-rust-linux:
+    - script: check-and-install-package
+      with:
+        command: cargo
+        package: cargo rustc
+
+  ensure-rust-macos:
+    - script: check-and-install-package
+      with:
+        command: cargo
+        package: rust
+
+  ensure-rust:
+    - script: ensure-rust-${{os}}
 
   ensure-jvm-opts:
     - read-state: config.profiler.name
