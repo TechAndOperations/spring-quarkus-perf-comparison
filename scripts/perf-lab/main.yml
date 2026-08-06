@@ -247,6 +247,40 @@ states:
       buildCmd: "${{APP_CMD_PREFIX}} cargo build --release"
       runCmd: "${{APP_CMD_PREFIX}} ${{RUNTIME_BUILD_DIR}}/release/axum08"
       logFileStartedRegex: ".*axum08.+started in.*"
+    # Go runtimes have no framework version to pin either (dependency versions are pinned in
+    # go.sum, not passed via CLI param). `go build -o target/release/go` places the binary at
+    # the same path convention as the Rust/native runtimes, so buildOutputDir needs no override.
+    #
+    # Registered as two separate runtimes rather than one runtime with an env-var toggle: the
+    # Node.js module's ORM-vs-raw-SQL comparison (QUERY_MODE) was only ever checked by hand
+    # with ad-hoc curl/manual runs, which initially produced an inconsistent read of the speedup
+    # (see git history around nodejs's "optim nodejs" commit). Two first-class runtimes ensures
+    # both get the same number of iterations, the same statistics, and the same pipeline scrutiny.
+    # `-a` forces every iteration to be a genuine cold build, the Go analogue of the Rust module's
+    # `cargo clean &&` (see below): without it, only the first iteration of a run is cold, since
+    # `clone-repo` copies the module to a fresh path once per run, not once per iteration. Unlike
+    # Cargo's `target/`, which is per-project, Go's build cache (`$GOCACHE`) is global across every
+    # Go project on the host, so `go clean -cache` would invalidate unrelated projects' cached
+    # builds too - `-a` forces this invocation to rebuild all packages from source without
+    # touching/clearing that shared cache.
+    - name: go-sql
+      type: go
+      dir: ${{GO_DIR}}
+      updateScript: update-go-version
+      updateVersion:
+      buildRequiresTestServices: false
+      buildCmd: '${{APP_CMD_PREFIX}} go build -a -ldflags="-s -w" -o target/release/go .'
+      runCmd: "QUERY_MODE=sql ${{APP_CMD_PREFIX}} ${{RUNTIME_BUILD_DIR}}/release/go"
+      logFileStartedRegex: ".*go.+started in.*"
+    - name: go-orm
+      type: go
+      dir: ${{GO_DIR}}
+      updateScript: update-go-version
+      updateVersion:
+      buildRequiresTestServices: false
+      buildCmd: '${{APP_CMD_PREFIX}} go build -a -ldflags="-s -w" -o target/release/go .'
+      runCmd: "QUERY_MODE=orm ${{APP_CMD_PREFIX}} ${{RUNTIME_BUILD_DIR}}/release/go"
+      logFileStartedRegex: ".*go.+started in.*"
 
 scripts:
   update-state:
@@ -264,6 +298,7 @@ scripts:
     - set-state: RUN.QUARKUS3_VIRTUAL_DIR ${{PROJ_REPO_DIR}}/quarkus3-virtual
     - set-state: RUN.NESTJS11_DIR ${{PROJ_REPO_DIR}}/nestjs11
     - set-state: RUN.AXUM08_DIR ${{PROJ_REPO_DIR}}/axum08
+    - set-state: RUN.GO_DIR ${{PROJ_REPO_DIR}}/go
     - set-state: RUN.BUILDS_DIR ${{PROJ_REPO_DIR}}/builds
     - set-state: RUN.ASYNC_PROFILER_DIR ${{BASE_DIR}}/${{ASYNC_PROFILER}}
 
@@ -417,6 +452,24 @@ scripts:
           then:
             - abort: "Cargo.lock is missing in ${{DIR}}. Run 'cargo build' there and commit the lockfile - benchmark runs need reproducible dependency versions."
     - sh: cargo fetch --locked
+
+  # Go dependency versions are pinned in go.sum, not passed via CLI param, so there is nothing to
+  # update here either. `go mod download` prefetches modules without building, keeping dependency
+  # resolution out of the measured build time - the Go equivalent of `cargo fetch`/`npm ci`.
+  update-go-version:
+    - log: "No framework version pinning for Go runtimes"
+    - sh: "[ -d ${{DIR}} ] && echo true || echo false"
+      then:
+        - regex: "false"
+          then:
+            - abort: "${{DIR}} does not exist in the checked-out repo. If the module is not committed/pushed yet, pass --repo-url <local path> so the run copies your working tree instead of cloning."
+    - sh: cd ${{DIR}}
+    - sh: "[ -f go.sum ] && echo true || echo false"
+      then:
+        - regex: "false"
+          then:
+            - abort: "go.sum is missing in ${{DIR}}. Run 'go mod tidy' there and commit go.mod/go.sum - benchmark runs need reproducible dependency versions."
+    - sh: go mod download
 
   start-test-services:
     - sh: "${{PROJ_REPO_DIR}}/scripts/infra.sh -c 3 -l 3 -p '${{config.resources.cpu.db}}' -g '${{config.resources.cpu.otel}}' -s ${{= ${{config.run.useContainerHostNetwork:false}} ? '-n' : ''}}"
