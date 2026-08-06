@@ -6,18 +6,23 @@ import { Fruit } from '../domain/fruit.entity';
 import { FRUIT_ROWS_SELECT, FruitRow, groupFruitRows } from './fruit-rows';
 
 /**
- * Which read implementation to use, selected by the FRUITS_QUERY_MODE environment variable.
+ * Which read implementation to use, selected by the QUERY_MODE environment variable.
  *
  *  - `orm` (default) - TypeORM `find({ relations })`, the idiomatic implementation.
  *  - `sql`           - one hand-written join, no entity hydration. See fruit-rows.ts.
  *
- * Both produce identical JSON; only the read path differs. Resolved once at load so the hot path
- * costs nothing. See README.md ("Two query implementations").
+ * Both produce identical JSON; only the read path differs. Read fresh on every call rather than
+ * cached in a module-level constant: the cost is one env var lookup and string compare, which
+ * does not show up next to an actual database round trip, and re-reading it is what lets
+ * test/fruit.e2e-spec.ts exercise both modes in the same Jest process by setting
+ * `process.env.QUERY_MODE` per describe block, with no module-cache tricks
+ * (`jest.resetModules()`) needed. See README.md ("Two query implementations").
  */
 export type FruitQueryMode = 'orm' | 'sql';
 
-export const FRUIT_QUERY_MODE: FruitQueryMode =
-  ((process.env.FRUITS_QUERY_MODE || 'orm').trim().toLowerCase() === 'sql') ? 'sql' : 'orm';
+export function queryMode(): FruitQueryMode {
+  return ((process.env.QUERY_MODE || 'orm').trim().toLowerCase() === 'sql') ? 'sql' : 'orm';
+}
 
 /**
  * Mirrors `org.acme.repository.FruitRepository` (a Panache `PanacheRepository<Fruit>`).
@@ -36,18 +41,18 @@ export class FruitRepository {
 
   /** Panache `listAll()` - no ORDER BY, matching the Java implementation. */
   listAll(): Promise<Fruit[]> {
-    return (FRUIT_QUERY_MODE === 'sql') ? this.listAllSql() : this.listAllOrm();
+    return (queryMode() === 'sql') ? this.listAllSql() : this.listAllOrm();
   }
 
   /** Panache `find("name", name).firstResultOptional()`. */
   findByName(name: string): Promise<Fruit> {
-    return (FRUIT_QUERY_MODE === 'sql') ? this.findByNameSql(name) : this.findByNameOrm(name);
+    return (queryMode() === 'sql') ? this.findByNameSql(name) : this.findByNameOrm(name);
   }
 
   /**
    * Panache `persist()`. `fruits.id` has no DEFAULT in `scripts/dbdata/db.sql`, so the id is drawn
    * from the `fruits_seq` sequence first - exactly what Hibernate's `GenerationType.SEQUENCE` with
-   * `allocationSize = 1` does. Unaffected by FRUITS_QUERY_MODE: writes are not benchmarked.
+   * `allocationSize = 1` does. Unaffected by QUERY_MODE: writes are not benchmarked.
    */
   async persist(fruit: Fruit): Promise<Fruit> {
     return this.repository.manager.transaction(async (manager) => {

@@ -1,5 +1,5 @@
 {
-  "name": "nestjs11",
+  "name": "nodejs",
   "version": "1.0.0",
   "description": "NestJS 11 implementation of the Fruit Store Benchmark API",
   "private": true,

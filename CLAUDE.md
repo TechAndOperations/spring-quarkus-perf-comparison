@@ -13,11 +13,11 @@ Performance benchmarking suite comparing Spring Boot and Quarkus frameworks. The
 | `quarkus3/` | Quarkus 3.x (3.32.x) | RESTEasy, Hibernate ORM Panache |
 | `quarkus3-virtual/` | Quarkus 3.x | Virtual threads variant |
 | `quarkus3-spring-compatibility/` | Quarkus 3.x | Uses Quarkus Spring compatibility layer |
-| `nestjs11/` | NestJS 11 (Node.js) | TypeScript + TypeORM; not a Maven module |
+| `nodejs/` | NestJS 11 (Node.js) | Two runtimes from one build: `nodejs-orm` (TypeORM, default) and `nodejs-sql` (raw SQL); not a Maven module |
 | `rust/` | Axum (Rust) | Two runtimes from one binary: `rust-orm` (SeaORM, default) and `rust-sql` (raw sqlx); not a Maven module |
 | `go/` | net/http (Go) | Two runtimes from one binary: `go-sql` (raw SQL) and `go-orm` (ORM); not a Maven module |
 
-All JVM modules share the same domain: `org.acme` package with Fruit/Store/Address entities, DTOs, mappers, and a REST controller. `nestjs11/` mirrors that structure in TypeScript (`src/domain`, `src/dto`, `src/mapping`, ...). `rust/` ships both an ORM path (`entities/`, `repository_orm.rs`, SeaORM) and a raw-SQL path (`repository_sql.rs`) selected at runtime by `QUERY_MODE` (default `orm`) - see `rust/README.md`. `go/` ships two persistence paths (`entities_gorm.go`/`repository_gorm.go` for GORM, `repository_pgx.go` for raw SQL), selected at runtime via `QUERY_MODE` - see `go/README.md`.
+All JVM modules share the same domain: `org.acme` package with Fruit/Store/Address entities, DTOs, mappers, and a REST controller. `nodejs/` mirrors that structure in TypeScript (`src/domain`, `src/dto`, `src/mapping`, ...) and, like the other two non-JVM modules, selects between its TypeORM path and a raw-SQL path (`fruit-rows.ts`) at runtime via `QUERY_MODE` (default `orm`). `rust/` ships both an ORM path (`entities/`, `repository_orm.rs`, SeaORM) and a raw-SQL path (`repository_sql.rs`) selected at runtime by `QUERY_MODE` (default `orm`) - see `rust/README.md`. `go/` ships the same kind of pair (`entities_gorm.go`/`repository_gorm.go` for GORM, `repository_pgx.go` for raw SQL), also selected by `QUERY_MODE` - see `go/README.md`.
 
 ## Build
 
@@ -31,10 +31,10 @@ All JVM modules share the same domain: `org.acme` package with Fruit/Store/Addre
 - Parent POM is an aggregator only (no shared dependencies)
 - Each module manages its own dependencies independently
 
-`nestjs11/` is built separately with npm (Node.js 22+), not Maven:
+`nodejs/` is built separately with npm (Node.js 22+), not Maven:
 
 ```sh
-cd nestjs11 && npm ci && npm run build   # tsc -> dist/, then assembles build/
+cd nodejs && npm ci && npm run build   # tsc -> dist/, then assembles build/
 ```
 
 `rust/` is built separately with Cargo (a recent stable Rust toolchain), not Maven:
