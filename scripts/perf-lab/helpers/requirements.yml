@@ -8,6 +8,7 @@ scripts:
     - script: ensure-jbang
     - script: ensure-node
     - script: ensure-rust
+    - script: ensure-go
     - script: ensure-jvm-opts
 
   # Needed only by the Node.js runtimes. Note that install-package-linux uses dnf, so on
@@ -43,6 +44,22 @@ scripts:
 
   ensure-rust:
     - script: ensure-rust-${{os}}
+
+  # Needed only by the Go runtimes. Same dnf-only caveat as ensure-node-linux above.
+  ensure-go-linux:
+    - script: check-and-install-package
+      with:
+        command: go
+        package: golang-go
+
+  ensure-go-macos:
+    - script: check-and-install-package
+      with:
+        command: go
+        package: go
+
+  ensure-go:
+    - script: ensure-go-${{os}}
 
   ensure-jvm-opts:
     - read-state: config.profiler.name
