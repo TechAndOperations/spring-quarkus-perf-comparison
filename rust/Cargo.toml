@@ -27,7 +27,19 @@ sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio",
 # The ORM path (QUERY_MODE=orm, the default). Wraps the same sqlx PgPool created for the SQL path
 # (see lib.rs::connect) via SqlxPostgresConnector, so DB_POOL_MAX applies identically to both
 # modes rather than each opening its own pool.
-sea-orm = { version = "1", default-features = false, features = ["sqlx-postgres", "runtime-tokio-rustls", "macros"] }
+#
+# "with-rust_decimal" is required for `entities::store_fruit_price::Model::price`: the column is
+# `numeric(12,2)`, and sqlx's `Decode<Postgres> for f64` only accepts the FLOAT8 OID, not NUMERIC
+# (OID 1700) - selecting a numeric column straight into an `f64` field fails at runtime with a
+# type-mismatch error (500s from the orm query path). The raw-SQL path avoids this by casting
+# `price::float8` in the query text (see repository_sql.rs); SeaORM has no per-query cast for
+# entity-derived queries, so the entity field is `Decimal` instead, converted to `f64` in
+# repository_orm.rs when building the DTO - the same numeric-to-f64 narrowing, just done in Rust
+# rather than in SQL.
+sea-orm = { version = "1", default-features = false, features = ["sqlx-postgres", "runtime-tokio-rustls", "macros", "with-rust_decimal"] }
+# Only for its `ToPrimitive::to_f64()` on the `Decimal` type above, converting the ORM path's
+# `store_fruit_price::Model::price` to the same `f64` DTO shape the raw-SQL path already casts to.
+rust_decimal = "1"
 
 # Needed to make FruitRepository a dyn-compatible trait: native async fn in traits is not yet
 # object-safe for dyn dispatch, so trait methods are boxed the same way sea-orm's own internals do.
