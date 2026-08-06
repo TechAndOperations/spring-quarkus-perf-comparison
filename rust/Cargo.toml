@@ -1,5 +1,5 @@
 [package]
-name = "axum08"
+name = "rust"
 version = "1.0.0"
 edition = "2021"
 publish = false
@@ -24,6 +24,18 @@ tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "signal
 # bang-macros (which would need a live DB at `cargo build` time) are never used in this codebase.
 sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "tls-rustls", "postgres", "macros"] }
 
+# The ORM path (QUERY_MODE=orm, the default). Wraps the same sqlx PgPool created for the SQL path
+# (see lib.rs::connect) via SqlxPostgresConnector, so DB_POOL_MAX applies identically to both
+# modes rather than each opening its own pool.
+sea-orm = { version = "1", default-features = false, features = ["sqlx-postgres", "runtime-tokio-rustls", "macros"] }
+
+# Needed to make FruitRepository a dyn-compatible trait: native async fn in traits is not yet
+# object-safe for dyn dispatch, so trait methods are boxed the same way sea-orm's own internals do.
+async-trait = "0.1"
+# Unifies sqlx::Error and sea_orm::DbErr behind one Result type in the FruitRepository trait,
+# rather than a hand-rolled error enum - the standard idiom for application (not library) code.
+anyhow = "1"
+
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
@@ -33,7 +45,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 # Observability parity with quarkus3-virtual (quarkus-micrometer-opentelemetry: traces at
 # traceidratio 0.1, OTLP export). These four crates must stay on matching major versions - if
 # `cargo build` fails here on first use, bump all four together rather than one at a time.
-# See src/tracing_setup.rs and axum08/README.md ("OpenTelemetry - unverified").
+# See src/tracing_setup.rs and rust/README.md ("OpenTelemetry - unverified").
 opentelemetry = "0.27"
 opentelemetry_sdk = { version = "0.27", features = ["rt-tokio"] }
 opentelemetry-otlp = { version = "0.27", features = ["grpc-tonic"] }

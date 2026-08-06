@@ -9,7 +9,7 @@ use crate::service::FruitService;
 
 /// Mirrors `org.acme.rest.FruitController`. Contract is the repo-wide `openapi.yml`.
 ///
-/// Unlike the NestJS module (see nestjs11/src/rest/fruit.controller.ts), axum needs no explicit
+/// Unlike the NestJS module (see nodejs/src/rest/fruit.controller.ts), axum needs no explicit
 /// override for either JAX-RS-matching behaviour: a handler returning `Json<T>` already answers
 /// 200 for any method including POST (NestJS defaults POST to 201), and returning `StatusCode`
 /// directly, with no body, already produces an empty 404 (no JSON error object).
@@ -46,11 +46,13 @@ async fn add_fruit(
 
 /// Maps any repository failure to a 500. The load test never exercises the write path and the
 /// read paths only fail on infrastructure problems (pool exhaustion, DB unreachable), so this
-/// stays a single catch-all rather than a per-error-kind mapping.
-struct ApiError(sqlx::Error);
+/// stays a single catch-all rather than a per-error-kind mapping. `anyhow::Error` covers both
+/// the SQL path's `sqlx::Error` and the ORM path's `sea_orm::DbErr` behind one type - see
+/// repository.rs.
+struct ApiError(anyhow::Error);
 
-impl From<sqlx::Error> for ApiError {
-    fn from(err: sqlx::Error) -> Self {
+impl From<anyhow::Error> for ApiError {
+    fn from(err: anyhow::Error) -> Self {
         Self(err)
     }
 }

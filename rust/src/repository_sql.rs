@@ -1,17 +1,18 @@
+use async_trait::async_trait;
 use sqlx::PgPool;
 use std::collections::HashMap;
 
 use crate::dto::{AddressDto, CreateFruitRequest, FruitDto, StoreDto, StoreFruitPriceDto};
+use crate::repository::FruitRepository;
 
-/// Single hand-written join, no ORM/entity hydration - the query shape validated in the Node.js
-/// module (see nestjs11/src/repository/fruit-rows.ts, "Two query implementations"), where it
-/// roughly doubled throughput over TypeORM's `find({ relations })`. There is no equivalent
-/// "idiomatic ORM path" question for this Rust module: sqlx does not have one, so this is simply
-/// the implementation, not an alternative.
+/// `QUERY_MODE=sql`. Single hand-written join, no ORM/entity hydration - the query shape
+/// validated in the Node.js module (see nodejs/src/repository/fruit-rows.ts, "Two query
+/// implementations"), where it roughly doubled throughput over TypeORM's `find({ relations })`,
+/// and the same shape as go-sql.
 ///
 /// `price::float8` casts Postgres `numeric` to `f64` at the database, avoiding a bignum/decimal
 /// dependency; matches the Node.js module's coercion of the same column
-/// (see nestjs11/src/domain/numeric.transformer.ts) and Java's `BigDecimal` -> JSON number.
+/// (see nodejs/src/domain/numeric.transformer.ts) and Java's `BigDecimal` -> JSON number.
 ///
 /// No ORDER BY, matching quarkus3-virtual's `FruitRepository.listAll()` (Panache `listAll()`).
 const FRUIT_ROWS_SELECT: &str = "
@@ -81,43 +82,36 @@ fn group_fruit_rows(rows: Vec<FruitRow>) -> Vec<FruitDto> {
     order.into_iter().filter_map(|id| by_id.remove(&id)).collect()
 }
 
-/// Mirrors `org.acme.repository.FruitRepository` (a Panache `PanacheRepository<Fruit>`).
-#[derive(Clone)]
-pub struct FruitRepository {
+pub struct SqlFruitRepository {
     pool: PgPool,
 }
 
-impl FruitRepository {
+impl SqlFruitRepository {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
+}
 
-    /// Panache `listAll()`.
-    pub async fn list_all(&self) -> Result<Vec<FruitDto>, sqlx::Error> {
+#[async_trait]
+impl FruitRepository for SqlFruitRepository {
+    async fn list_all(&self) -> anyhow::Result<Vec<FruitDto>> {
         let rows: Vec<FruitRow> = sqlx::query_as(FRUIT_ROWS_SELECT).fetch_all(&self.pool).await?;
 
         Ok(group_fruit_rows(rows))
     }
 
-    /// Panache `find("name", name).firstResultOptional()`.
-    pub async fn find_by_name(&self, name: &str) -> Result<Option<FruitDto>, sqlx::Error> {
+    async fn find_by_name(&self, name: &str) -> anyhow::Result<Option<FruitDto>> {
         let sql = format!("{FRUIT_ROWS_SELECT} WHERE f.name = $1");
         let rows: Vec<FruitRow> = sqlx::query_as(&sql).bind(name).fetch_all(&self.pool).await?;
 
         Ok(group_fruit_rows(rows).into_iter().next())
     }
 
-    /// Panache `persist()`. `fruits.id` has no DEFAULT in `scripts/dbdata/db.sql`, so the id is
-    /// drawn from the `fruits_seq` sequence in the same statement as the insert - one round trip,
-    /// matching Hibernate's `GenerationType.SEQUENCE` with `allocationSize = 1` in effect (one
-    /// `nextval` per row) without its two-statement mechanics. See the discussion in this
-    /// repository's history for why the Node.js module's first implementation used four
-    /// round trips (an explicit transaction) and was simplified to this shape.
-    ///
-    /// Deliberately maps only `name` and `description`, matching
-    /// `FruitMapper.map(FruitDTO -> Fruit)`'s comment: "the rest of the relationships aren't
-    /// built out yet". `store_prices` is therefore always empty on the returned DTO.
-    pub async fn persist(&self, fruit: CreateFruitRequest) -> Result<FruitDto, sqlx::Error> {
+    /// `fruits.id` has no DEFAULT in `scripts/dbdata/db.sql`, so the id is drawn from the
+    /// `fruits_seq` sequence in the same statement as the insert - one round trip, matching
+    /// Hibernate's `GenerationType.SEQUENCE` with `allocationSize = 1` in effect (one `nextval`
+    /// per row) without its two-statement mechanics.
+    async fn persist(&self, fruit: CreateFruitRequest) -> anyhow::Result<FruitDto> {
         let id: i64 = sqlx::query_scalar(
             "INSERT INTO fruits (id, name, description) VALUES (nextval('fruits_seq'), $1, $2) RETURNING id",
         )
