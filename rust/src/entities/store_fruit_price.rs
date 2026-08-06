@@ -12,7 +12,9 @@ pub struct Model {
     pub fruit_id: i64,
     #[sea_orm(primary_key, auto_increment = false, column_name = "store_id")]
     pub store_id: i64,
-    pub price: f64,
+    // `numeric(12,2)` in the DB - `f64` would fail to decode at runtime (sqlx's `Decode<Postgres>
+    // for f64` only accepts the FLOAT8 OID). Converted to `f64` for the DTO in repository_orm.rs.
+    pub price: Decimal,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

@@ -121,12 +121,18 @@ benchmark artifact that is compiled once and measured many times.
 
 ## Notes on comparability
 
-- **`numeric`/`bigint` handled by casting in SQL**, not by a decimal crate: `price::float8` in the
-  raw-SQL query text casts Postgres `numeric` to `f64` at the database, matching Java's
+- **`numeric`/`bigint` need a cast or a decimal type, not a plain `f64` field.** `price::float8` in
+  the raw-SQL query text casts Postgres `numeric` to `f64` at the database, matching Java's
   `BigDecimal` -> JSON number and the Node.js module's `bigint`/`numeric` string coercion (see
-  `nodejs/src/domain/numeric.transformer.ts`) with less code and no extra dependency. SeaORM's
-  entities (`entities/*.rs`) map the same columns straight to `i64`/`f64` fields with no casting
-  needed on that side either.
+  `nodejs/src/domain/numeric.transformer.ts`). SeaORM has no per-query cast for entity-derived
+  queries, so `entities/store_fruit_price.rs::Model::price` is typed `Decimal` (rust_decimal, via
+  sea-orm's `with-rust_decimal` feature) rather than `f64` - selecting a `numeric` column straight
+  into an `f64` field fails at runtime, since sqlx's `Decode<Postgres> for f64` only accepts the
+  FLOAT8 OID, not `NUMERIC`. `repository_orm.rs` narrows `Decimal` to `f64` with
+  `ToPrimitive::to_f64()` when building the DTO - the same numeric-to-`f64` narrowing as the
+  raw-SQL path, just done in Rust instead of in the query text. `id` columns (`bigint`) map
+  straight to `i64` with no such issue, since `Decode<Postgres> for i64` does accept the `BIGINT`
+  OID directly.
 - **SeaORM has no embedded-value-object concept.** Unlike JPA's `@Embeddable`/TypeORM's
   `{ prefix: false }`/GORM's `embedded` tag, there is no separate `Address` entity in
   `entities/store.rs` - `address`/`city`/`country` are flat fields directly on `store::Model`. The

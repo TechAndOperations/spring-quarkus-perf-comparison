@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use rust_decimal::prelude::ToPrimitive;
 use sea_orm::{ColumnTrait, ConnectionTrait, DatabaseBackend, DatabaseConnection, EntityTrait, QueryFilter, Statement};
 use std::collections::HashMap;
 
@@ -55,7 +56,10 @@ impl OrmFruitRepository {
                         currency: store.currency,
                         address: AddressDto { address: store.address, city: store.city, country: store.country },
                     },
-                    price: price.price,
+                    // `numeric(12,2)` decodes into `Decimal`, not `f64` (see entities/store_fruit_price.rs);
+                    // narrow it here, the same numeric->f64 conversion the raw-SQL path does with
+                    // `price::float8` at the database instead.
+                    price: price.price.to_f64().unwrap_or(0.0),
                 });
             }
         }
