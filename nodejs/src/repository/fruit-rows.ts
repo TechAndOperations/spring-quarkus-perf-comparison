@@ -2,7 +2,7 @@ import { Fruit } from '../domain/fruit.entity';
 
 /**
  * Single-statement alternative to TypeORM's `find({ relations })`, used when
- * FRUITS_QUERY_MODE=sql. See README.md ("Two query implementations").
+ * QUERY_MODE=sql. See README.md ("Two query implementations").
  *
  * The ORM path builds ~250 entity instances per GET /fruits (11 fruits, 34 prices, their stores),
  * running a value transformer per column and installing prototype accessors for the lazy `fruit`

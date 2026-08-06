@@ -25,7 +25,7 @@ if (process.env.NODE_COMPILE_CACHE_DISABLED !== 'true') {
   const nodeModule = require('node:module');
 
   if (typeof nodeModule.enableCompileCache === 'function') {
-    const dir = process.env.NODE_COMPILE_CACHE || path.join(os.tmpdir(), 'nestjs11-compile-cache');
+    const dir = process.env.NODE_COMPILE_CACHE || path.join(os.tmpdir(), 'nodejs-compile-cache');
 
     try {
       nodeModule.enableCompileCache(dir);

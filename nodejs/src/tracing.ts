@@ -22,7 +22,7 @@ import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from '@opentelemetry/semantic
 if (process.env.OTEL_SDK_DISABLED !== 'true') {
   const sdk = new NodeSDK({
     resource: resourceFromAttributes({
-      [ATTR_SERVICE_NAME]: process.env.OTEL_SERVICE_NAME || 'nestjs11',
+      [ATTR_SERVICE_NAME]: process.env.OTEL_SERVICE_NAME || 'nodejs',
       [ATTR_SERVICE_VERSION]: '1.0'
     }),
     sampler: new TraceIdRatioBasedSampler(Number(process.env.OTEL_TRACES_SAMPLER_ARG || 0.1)),

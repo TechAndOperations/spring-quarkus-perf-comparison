@@ -5,7 +5,7 @@ import { FruitDTO } from '../dto/fruit.dto';
 import { fruitFromDto, fruitToDto } from '../mapping/fruit.mapper';
 import { FruitRepository } from '../repository/fruit.repository';
 
-const tracer = trace.getTracer('nestjs11');
+const tracer = trace.getTracer('nodejs');
 
 /** The `@WithSpan` equivalent used by `org.acme.service.FruitService`. */
 function withSpan<T>(name: string, attributes: Record<string, string>, work: (span: Span) => Promise<T>): Promise<T> {

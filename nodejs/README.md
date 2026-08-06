@@ -1,4 +1,4 @@
-# nestjs11
+# nodejs
 
 NestJS 11 + TypeORM implementation of the Fruit Store Benchmark API, ported from
 [`quarkus3-virtual`](../quarkus3-virtual). It adds **Node.js as a runtime category** to the
@@ -16,13 +16,35 @@ same Postgres schema ([`scripts/dbdata/db.sql`](../scripts/dbdata/db.sql)):
 The source layout deliberately mirrors the Java packages (`domain`, `dto`, `mapping`,
 `repository`, `rest`, `service`) so the two implementations can be diffed side by side.
 
+## Two query implementations, selectable at runtime
+
+This module ships **two first-class benchmark runtimes** built from the same compiled output,
+selected by the `QUERY_MODE` environment variable:
+
+- **`nodejs-orm`** (`QUERY_MODE=orm`, the **default**) - TypeORM `find({ relations })`, the
+  idiomatic implementation. See `src/repository/fruit.repository.ts`.
+- **`nodejs-sql`** (`QUERY_MODE=sql`) - a single hand-written join, no entity hydration. See
+  `src/repository/fruit-rows.ts`. Roughly 1.7x the throughput of `nodejs-orm` when this was first
+  measured.
+
+Both are registered as separate entries in `scripts/perf-lab/main.yml` rather than one runtime
+toggled by an env var, and `test/fruit.e2e-spec.ts` runs every assertion against both modes on
+every `npm test`/`npm run test:e2e` invocation - the same approach later adopted for the `rust/`
+and `go/` modules (`rust-orm`/`rust-sql`, `go-sql`/`go-orm`). This module is where the
+comparison was first done, and it was originally checked only by hand, with one-off manual runs
+on different occasions rather than a controlled same-session A/B - that produced an initially
+wrong read of the speedup (a factor first reported by comparing two measurements taken in
+different sessions, only corrected once both modes were re-measured back-to-back in the same
+session; see `rust/README.md`, "Why `orm` (SeaORM) is the default", for the fuller account). Two
+first-class runtimes benchmarked by the same pipeline invocation avoid that failure mode entirely.
+
 ## Running locally
 
 Requires Node.js 22+ and the shared infrastructure containers.
 
 ```sh
 cd ../scripts && ./infra.sh -s     # Postgres on :5432 (+ Grafana LGTM on :4317)
-cd ../nestjs11
+cd ../nodejs
 npm install                        # first time only, to generate package-lock.json
 npm run build
 npm start                          # listens on :8080
@@ -38,8 +60,10 @@ npm start                          # listens on :8080
 curl -s http://localhost:8080/fruits | jq '.[0]'
 curl -s http://localhost:8080/fruits/Apple
 npm test                           # mapper unit tests
-npm run test:e2e                   # endpoint tests against the seeded database
+npm run test:e2e                   # endpoint tests against the seeded database, both query modes
 ```
+
+Set `QUERY_MODE=sql` before `npm start` to run the raw-SQL path instead of the TypeORM default.
 
 Configuration is environment-driven; the defaults match the `%prod` profile of the Quarkus
 modules: `DB_HOST` (`localhost`), `DB_PORT` (`5432`), `DB_USER`/`DB_PASSWORD`/`DB_NAME`
@@ -48,12 +72,12 @@ Set `OTEL_SDK_DISABLED=true` to run without instrumentation.
 
 ## Benchmarking
 
-Registered as the `nestjs11-node` runtime. It is **opt-in** — it is not in the default runtime
-set, so it must be requested explicitly:
+Registered as the `nodejs-orm` and `nodejs-sql` runtimes. Both are **opt-in** — neither is in the
+default runtime set, so they must be requested explicitly:
 
 ```sh
 cd ../scripts/perf-lab
-./run-benchmarks.sh --runtimes nestjs11-node --tests run-load-test --iterations 1
+./run-benchmarks.sh --runtimes nodejs-orm,nodejs-sql --tests run-load-test --iterations 3
 ```
 
 `npm run build` compiles with `tsc` and then assembles a self-contained `build/` directory
@@ -62,6 +86,9 @@ artifact (`buildOutputDir: build`). Copying `node_modules` is the direct analogu
 `./mvnw package` copying every dependency jar into `target/quarkus-app/lib/`, so it belongs
 inside the measured build time. `npm ci` runs beforehand in the `update-node-version` step and is
 therefore excluded, mirroring how `./mvnw dependency:go-offline` is excluded for the JVM runtimes.
+Both runtimes build the identical output and only differ in the `QUERY_MODE` environment variable
+set in their `runCmd` - expect their build-time measurements to be near-identical; only
+startup/RSS/throughput should meaningfully differ between them.
 
 Use `--node-args` for runtime flags; the default `--max-old-space-size=512` is the analogue of the
 JVM runtimes' `-Xmx512m`.
@@ -77,11 +104,12 @@ Read these before drawing conclusions from a head-to-head run.
   considered and rejected: `pmap -x $APP_PID` in
   [`main.yml`](../scripts/perf-lab/main.yml) reads a single PID and would under-report worker
   memory, and `kill -15` could orphan workers.
-- **Query shapes differ even though responses are identical.** `FruitRepository` joins
-  `storePrices` → `store` in one statement. The Java module instead relies on a lazy
-  `@OneToMany`, an EAGER `@ManyToOne` with `FetchMode.SELECT`, and Hibernate's second-level cache
-  on `Store` — several statements per request in exchange for cache hits. Each module uses the
-  idiomatic tuned approach for its stack.
+- **Query shapes differ even though responses are identical.** In `orm` mode, `FruitRepository`
+  joins `storePrices` → `store` in one statement via TypeORM's `find({ relations })`. The Java
+  module instead relies on a lazy `@OneToMany`, an EAGER `@ManyToOne` with `FetchMode.SELECT`, and
+  Hibernate's second-level cache on `Store` — several statements per request in exchange for
+  cache hits. `sql` mode (`fruit-rows.ts`) uses the same single hand-written join as `rust-sql`
+  and `go-sql`. Each shape is its own module's idiomatic default, not a bug.
 - **Sequence-generated ids are explicit.** `fruits.id` has no `DEFAULT`, so the repository draws
   from `fruits_seq` before inserting, exactly as Hibernate's `GenerationType.SEQUENCE` with
   `allocationSize = 1` does.

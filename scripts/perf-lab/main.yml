@@ -225,16 +225,34 @@ states:
       logFileStartedRegex: ".*Started SpringBoot4Application in.+seconds.*"
     # Node.js runtimes have no Maven build, so they set buildOutputDir (npm run build assembles a
     # self-contained build/ directory) and use an updateScript that prefetches with npm instead.
-    - name: nestjs11-node
+    #
+    # Registered as two separate runtimes (both build the same output; only QUERY_MODE in runCmd
+    # differs) rather than one runtime with an env-var toggle - the same reason as
+    # rust-orm/rust-sql and go-sql/go-orm: a first-class pipeline runtime per mode gets the
+    # same iteration count and the same statistical treatment, instead of relying on a manual A/B
+    # someone might run inconsistently. This module's ORM-vs-raw-SQL comparison (QUERY_MODE) was
+    # originally only ever checked by hand this way, which is what first produced a wrong read of
+    # the speedup - see rust/README.md ("Why orm (SeaORM) is the default") for that history.
+    - name: nodejs-orm
       type: node
-      dir: ${{NESTJS11_DIR}}
+      dir: ${{NODEJS_DIR}}
       updateScript: update-node-version
       updateVersion:
       buildRequiresTestServices: false
       buildOutputDir: build
       buildCmd: "${{APP_CMD_PREFIX}} npm run build"
-      runCmd: "${{BASE_NODE_CMD}} ${{RUNTIME_BUILD_DIR}}/dist/main.js"
-      logFileStartedRegex: ".*nestjs11.+started in.*"
+      runCmd: "QUERY_MODE=orm ${{BASE_NODE_CMD}} ${{RUNTIME_BUILD_DIR}}/dist/main.js"
+      logFileStartedRegex: ".*nodejs.+started in.*"
+    - name: nodejs-sql
+      type: node
+      dir: ${{NODEJS_DIR}}
+      updateScript: update-node-version
+      updateVersion:
+      buildRequiresTestServices: false
+      buildOutputDir: build
+      buildCmd: "${{APP_CMD_PREFIX}} npm run build"
+      runCmd: "QUERY_MODE=sql ${{BASE_NODE_CMD}} ${{RUNTIME_BUILD_DIR}}/dist/main.js"
+      logFileStartedRegex: ".*nodejs.+started in.*"
     # Rust runtimes have no framework version to pin either (dependency versions are pinned in
     # Cargo.lock, not passed via CLI param). `cargo` names its output dir `target/`, same as
     # Maven, so buildOutputDir needs no override here - only the binary path inside it differs.
@@ -317,7 +335,7 @@ scripts:
     - set-state: RUN.SPRING4_BOOT_DIR ${{PROJ_REPO_DIR}}/springboot4
     - set-state: RUN.QUARKUS3_DIR ${{PROJ_REPO_DIR}}/quarkus3
     - set-state: RUN.QUARKUS3_VIRTUAL_DIR ${{PROJ_REPO_DIR}}/quarkus3-virtual
-    - set-state: RUN.NESTJS11_DIR ${{PROJ_REPO_DIR}}/nestjs11
+    - set-state: RUN.NODEJS_DIR ${{PROJ_REPO_DIR}}/nodejs
     - set-state: RUN.RUST_DIR ${{PROJ_REPO_DIR}}/rust
     - set-state: RUN.GO_DIR ${{PROJ_REPO_DIR}}/go
     - set-state: RUN.BUILDS_DIR ${{PROJ_REPO_DIR}}/builds
