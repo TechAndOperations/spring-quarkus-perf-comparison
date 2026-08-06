@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
 
 /// Mirrors `org.acme.dto.AddressDTO`. Field order matches the Java record's declaration order,
-/// same convention used by the Node.js module (see nestjs11/src/dto/address.dto.ts) - both differ
+/// same convention used by the Node.js module (see nodejs/src/dto/address.dto.ts) - both differ
 /// harmlessly from quarkus3-virtual's alphabetical order (its Jackson reflection-free serializers
-/// sort keys; see nestjs11/README.md, "JSON key order differs ... harmlessly").
+/// sort keys; see nodejs/README.md, "JSON key order differs ... harmlessly").
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AddressDto {
     pub address: String,
@@ -33,7 +33,7 @@ pub struct StoreFruitPriceDto {
 /// `description` and `store_prices` are skipped when empty to replicate
 /// `quarkus.jackson.serialization-inclusion: non-empty` from
 /// `quarkus3-virtual/src/main/resources/application.yml` - the same rule the Node.js module
-/// implements in its mappers (see nestjs11/src/mapping/fruit.mapper.ts).
+/// implements in its mappers (see nodejs/src/mapping/fruit.mapper.ts).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FruitDto {

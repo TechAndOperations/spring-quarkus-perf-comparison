@@ -31,7 +31,7 @@ pub fn init() -> Option<TracerProvider> {
         .and_then(|v| v.parse().ok())
         .unwrap_or(0.1);
 
-    let service_name = std::env::var("OTEL_SERVICE_NAME").unwrap_or_else(|_| "axum08".to_string());
+    let service_name = std::env::var("OTEL_SERVICE_NAME").unwrap_or_else(|_| "rust".to_string());
 
     let exporter = opentelemetry_otlp::SpanExporter::builder()
         .with_tonic()
@@ -44,7 +44,7 @@ pub fn init() -> Option<TracerProvider> {
         .with_batch_exporter(exporter, Tokio)
         .build();
 
-    let tracer = provider.tracer("axum08");
+    let tracer = provider.tracer("rust");
 
     tracing_subscriber::registry()
         .with(EnvFilter::from_default_env())

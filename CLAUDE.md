@@ -14,10 +14,10 @@ Performance benchmarking suite comparing Spring Boot and Quarkus frameworks. The
 | `quarkus3-virtual/` | Quarkus 3.x | Virtual threads variant |
 | `quarkus3-spring-compatibility/` | Quarkus 3.x | Uses Quarkus Spring compatibility layer |
 | `nestjs11/` | NestJS 11 (Node.js) | TypeScript + TypeORM; not a Maven module |
-| `axum08/` | Axum (Rust) | sqlx, raw SQL (no ORM); not a Maven module |
+| `rust/` | Axum (Rust) | Two runtimes from one binary: `rust-orm` (SeaORM, default) and `rust-sql` (raw sqlx); not a Maven module |
 | `go/` | net/http (Go) | Two runtimes from one binary: `go-sql` (raw SQL) and `go-orm` (ORM); not a Maven module |
 
-All JVM modules share the same domain: `org.acme` package with Fruit/Store/Address entities, DTOs, mappers, and a REST controller. `nestjs11/` mirrors that structure in TypeScript (`src/domain`, `src/dto`, `src/mapping`, ...). `axum08/` mirrors the DTO/REST layers in Rust but has no `domain`/`mapping` split - see `axum08/README.md` ("Single query implementation, no ORM"). `go/` ships two persistence paths (`entities_gorm.go`/`repository_gorm.go` for GORM, `repository_pgx.go` for raw SQL), selected at runtime via `QUERY_MODE` - see `go/README.md`.
+All JVM modules share the same domain: `org.acme` package with Fruit/Store/Address entities, DTOs, mappers, and a REST controller. `nestjs11/` mirrors that structure in TypeScript (`src/domain`, `src/dto`, `src/mapping`, ...). `rust/` ships both an ORM path (`entities/`, `repository_orm.rs`, SeaORM) and a raw-SQL path (`repository_sql.rs`) selected at runtime by `QUERY_MODE` (default `orm`) - see `rust/README.md`. `go/` ships two persistence paths (`entities_gorm.go`/`repository_gorm.go` for GORM, `repository_pgx.go` for raw SQL), selected at runtime via `QUERY_MODE` - see `go/README.md`.
 
 ## Build
 
@@ -37,10 +37,10 @@ All JVM modules share the same domain: `org.acme` package with Fruit/Store/Addre
 cd nestjs11 && npm ci && npm run build   # tsc -> dist/, then assembles build/
 ```
 
-`axum08/` is built separately with Cargo (a recent stable Rust toolchain), not Maven:
+`rust/` is built separately with Cargo (a recent stable Rust toolchain), not Maven:
 
 ```sh
-cd axum08 && cargo build --release   # binary at target/release/axum08
+cd rust && cargo build --release   # binary at target/release/rust
 ```
 
 `go/` is built separately with Go (a recent stable toolchain), not Maven:

@@ -79,8 +79,8 @@ help() {
   echo "  --repo-url <SCM_REPO_URL>                               The SCM repo url"
   echo "                                                              Default: '${SCM_REPO_URL}'"
   echo "  --runtimes <RUNTIMES>                                   The runtimes to test, separated by commas"
-  echo "                                                              Accepted values (1 or more of): quarkus3-jvm, quarkus3-leyden, quarkus3-virtual, quarkus3-virtual-leyden, quarkus3-native, spring3-jvm, spring3-leyden, spring3-virtual, spring3-virtual-leyden, spring3-jvm-aot, spring3-native, spring4-jvm, spring4-leyden, spring4-virtual, spring4-virtual-leyden, spring4-jvm-aot, spring4-native, nestjs11-node, axum08-rust, go-sql, go-orm"
-  echo "                                                              NOTE: nestjs11-node, axum08-rust, go-sql and go-orm are opt-in only - they are not part of the default runtimes"
+  echo "                                                              Accepted values (1 or more of): quarkus3-jvm, quarkus3-leyden, quarkus3-virtual, quarkus3-virtual-leyden, quarkus3-native, spring3-jvm, spring3-leyden, spring3-virtual, spring3-virtual-leyden, spring3-jvm-aot, spring3-native, spring4-jvm, spring4-leyden, spring4-virtual, spring4-virtual-leyden, spring4-jvm-aot, spring4-native, nestjs11-node, rust-orm, rust-sql, go-sql, go-orm"
+  echo "                                                              NOTE: nestjs11-node, rust-orm, rust-sql, go-sql and go-orm are opt-in only - they are not part of the default runtimes"
   echo "                                                              Default: 'quarkus3-jvm,quarkus3-leyden,quarkus3-virtual,quarkus3-virtual-leyden,quarkus3-native,spring3-jvm,spring3-leyden,spring3-jvm-aot,spring3-virtual,spring3-virtual-leyden,spring3-native,spring4-jvm,spring4-leyden,spring4-virtual,spring4-virtual-leyden,spring4-jvm-aot,spring4-native'"
   echo "  --run-identifier <RUN_IDENTIFIER>                       An optional identifier for this run to be added to the run output"
   echo "  --scenario <SCENARIO>                                   The scenario to run"
@@ -341,8 +341,8 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   PROFILER="none"
   QUARKUS_BUILD_CONFIG_ARGS=""
   QUARKUS_VERSION=""
-  ALLOWED_RUNTIMES=("quarkus3-jvm" "quarkus3-leyden" "quarkus3-virtual" "quarkus3-virtual-leyden" "quarkus3-native" "spring3-jvm" "spring3-leyden" "spring3-virtual" "spring3-virtual-leyden" "spring3-jvm-aot" "spring3-native" "spring4-jvm" "spring4-leyden" "spring4-virtual" "spring4-virtual-leyden" "spring4-jvm-aot" "spring4-native" "nestjs11-node" "axum08-rust" "go-sql" "go-orm")
-  # NOTE: nestjs11-node, axum08-rust, go-sql and go-orm are deliberately absent from
+  ALLOWED_RUNTIMES=("quarkus3-jvm" "quarkus3-leyden" "quarkus3-virtual" "quarkus3-virtual-leyden" "quarkus3-native" "spring3-jvm" "spring3-leyden" "spring3-virtual" "spring3-virtual-leyden" "spring3-jvm-aot" "spring3-native" "spring4-jvm" "spring4-leyden" "spring4-virtual" "spring4-virtual-leyden" "spring4-jvm-aot" "spring4-native" "nestjs11-node" "rust-orm" "rust-sql" "go-sql" "go-orm")
+  # NOTE: nestjs11-node, rust-orm, rust-sql, go-sql and go-orm are deliberately absent from
   # DEFAULT_RUNTIMES. Adding a new runtime to the defaults would silently change the composition
   # of every existing full-suite run.
   DEFAULT_RUNTIMES=("quarkus3-jvm" "quarkus3-leyden" "quarkus3-virtual" "quarkus3-virtual-leyden" "quarkus3-native" "spring3-jvm" "spring3-leyden" "spring3-virtual" "spring3-virtual-leyden" "spring3-native" "spring4-jvm" "spring4-leyden" "spring4-virtual" "spring4-virtual-leyden" "spring4-native")
