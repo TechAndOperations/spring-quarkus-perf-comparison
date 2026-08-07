@@ -96,8 +96,15 @@ CURL_PID=$!
 # Record start time and launch the application.
 # Redirect and exec inside the subshell so the application process
 # directly replaces the subshell, making $APP_PID its actual PID.
+#
+# `exec env $RUN_CMD` rather than `exec $RUN_CMD`: unquoted word-splitting of $RUN_CMD does not
+# let bash treat a leading `VAR=value` word as an environment assignment prefix - that parsing
+# only applies to literal source text, not to the result of a variable expansion - so a RUN_CMD
+# like "QUERY_MODE=orm taskset --cpu-list 0,1 node ... " would make exec try to run a program
+# literally named "QUERY_MODE=orm" and fail instantly. `env` parses leading NAME=value arguments
+# itself before exec'ing the remaining command, so it works whether or not RUN_CMD has one.
 ts=$(_date)
-( exec $RUN_CMD &>"$LOG_FILE" ) &
+( exec env $RUN_CMD &>"$LOG_FILE" ) &
 APP_PID=$!
 
 # Ensure cleanup on exit (e.g. on timeout)
