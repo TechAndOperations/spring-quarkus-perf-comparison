@@ -117,6 +117,7 @@ les runs avortés (section `results` vide) et ne duplique pas un run déjà arch
 | [`20260810_1723__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx384m-ParallelGC_3it.json`](20260810_1723__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx384m-ParallelGC_3it.json) | 2026-08-10T17:23:25Z | quarkus3-native, quarkus3-virtual, spring4-native, spring4-virtual | 3 | `-Xmx384m` `-XX:+UseParallelGC` | tuned |
 | [`20260810_1925__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx256m-ParallelGC_3it.json`](20260810_1925__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx256m-ParallelGC_3it.json) | 2026-08-10T19:25:33Z | quarkus3-native, quarkus3-virtual, spring4-native, spring4-virtual | 3 | `-Xmx256m` `-XX:+UseParallelGC` | tuned |
 | [`20260811_0338__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx128m-ParallelGC_3it.json`](20260811_0338__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx128m-ParallelGC_3it.json) | 2026-08-11T03:38:27Z | quarkus3-native, quarkus3-virtual, spring4-native, spring4-virtual | 3 | `-Xmx128m` `-XX:+UseParallelGC` | tuned |
+| [`20260811_0548__quarkus3-native__Xmx64m-ParallelGC_3it.json`](20260811_0548__quarkus3-native__Xmx64m-ParallelGC_3it.json) | 2026-08-11T05:48:17Z | quarkus3-native | 3 | `-Xmx64m` `-XX:+UseParallelGC` | tuned |
 <!-- runs -->
 
 ## Résultats
@@ -141,6 +142,7 @@ Une ligne par runtime, moyennée sur les itérations du run.
 | `20260811_0338` | quarkus3-virtual | 2 | 128m | 13.0 | 3 501 | 245.1 | 356.7 | 6 336 | 18.47 |
 | `20260811_0338` | spring4-native | 2 | 128m | 521.3 | 1 027 | 233.3 | 250.2 | 1 501 | 6.10 |
 | `20260811_0338` | spring4-virtual | 2 | 128m | 6.1 | 9 278 | 341.2 | 431.7 | 4 955 | 12.05 |
+| `20260811_0548` | quarkus3-native | 2 | 64m | 315.7 | 111 | 99.3 | 142.0 | 2 798 | 20.69 |
 <!-- results -->
 
 ### Origine des colonnes
