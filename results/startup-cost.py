@@ -39,16 +39,18 @@ W, H = 900, 560
 M = {"t": 122, "r": 168, "b": 66, "l": 74}
 PW, PH = W - M["l"] - M["r"], H - M["t"] - M["b"]
 
-# Label offsets tuned against the rendered geometry so no label rides its own marker
-# or a neighbour's.
-LABEL_DY = {
-    "rust-orm": -17,
-    "go-orm": 24,
-    "quarkus3-native": -17,
-    "nodejs-orm": 24,
-    "spring4-native": -17,
-    "quarkus3-virtual": 24,
-    "spring4-virtual": -17,
+# Vertical offset and horizontal anchor per label, tuned against the rendered geometry
+# so none rides its own marker, a neighbour, or the plot edge. The two extreme points
+# anchor to their inner side: centred, they would spill left of the axis and right into
+# the legend once the RSS value lengthened them.
+LABEL_AT = {
+    "rust-orm": (-17, "start"),
+    "go-orm": (24, "middle"),
+    "quarkus3-native": (-17, "middle"),
+    "nodejs-orm": (24, "middle"),
+    "spring4-native": (-17, "middle"),
+    "quarkus3-virtual": (24, "middle"),
+    "spring4-virtual": (-17, "end"),
 }
 
 
@@ -127,9 +129,13 @@ def build():
                 r=7.0,
             )
         )
+        # The RSS rides in the label so each point states its own y value; below 10 MiB
+        # a decimal still carries information, above it the integer is enough.
+        shown = f"{rss:.1f}" if rss < 10 else f"{rss:.0f}"
+        dy, anchor = LABEL_AT[rt]
         o.append(
-            f'<text x="{px(ttfr):.1f}" y="{py(rss) + LABEL_DY[rt]:.1f}" fill="{ink2}" '
-            f'font-size="10.5" text-anchor="middle">{rt}</text>'
+            f'<text x="{px(ttfr):.1f}" y="{py(rss) + dy:.1f}" fill="{ink2}" '
+            f'font-size="10.5" text-anchor="{anchor}">{rt} · {shown} MiB</text>'
         )
 
     lx, ly = M["l"] + PW + 26, M["t"] + 6
