@@ -1,0 +1,4 @@
+# `go build` with no -o drops the binary here, named after the module (goapp), not after the
+# directory - the pipeline's own build writes to target/release/go, already covered by the root
+# .gitignore.
+/goapp

@@ -1,7 +1,9 @@
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
+import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-grpc';
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-grpc';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-grpc';
 import { resourceFromAttributes } from '@opentelemetry/resources';
+import { BatchLogRecordProcessor } from '@opentelemetry/sdk-logs';
 import { NodeSDK } from '@opentelemetry/sdk-node';
 import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
 import { TraceIdRatioBasedSampler } from '@opentelemetry/sdk-trace-base';
@@ -28,6 +30,11 @@ if (process.env.OTEL_SDK_DISABLED !== 'true') {
     sampler: new TraceIdRatioBasedSampler(Number(process.env.OTEL_TRACES_SAMPLER_ARG || 0.1)),
     traceExporter: new OTLPTraceExporter(),
     metricReader: new PeriodicExportingMetricReader({ exporter: new OTLPMetricExporter() }),
+    // Third signal, to match `quarkus3-virtual`'s otel.logs.enabled. NestJS runs with
+    // `logger: false` and the app writes through console.log, so nothing here is picked up
+    // automatically - main.ts emits its startup line through the logs API on top of the console
+    // output, the same way the Go module does.
+    logRecordProcessors: [new BatchLogRecordProcessor(new OTLPLogExporter())],
     instrumentations: [
       getNodeAutoInstrumentations({
         // Extremely chatty and has no analogue in the Quarkus module's instrumentation.
