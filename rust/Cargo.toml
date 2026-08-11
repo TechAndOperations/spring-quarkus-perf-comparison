@@ -59,9 +59,14 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 # `cargo build` fails here on first use, bump all four together rather than one at a time.
 # See src/tracing_setup.rs and rust/README.md ("OpenTelemetry - unverified").
 opentelemetry = "0.27"
-opentelemetry_sdk = { version = "0.27", features = ["rt-tokio"] }
-opentelemetry-otlp = { version = "0.27", features = ["grpc-tonic"] }
+opentelemetry_sdk = { version = "0.27", features = ["rt-tokio", "logs"] }
+opentelemetry-otlp = { version = "0.27", features = ["grpc-tonic", "logs"] }
 tracing-opentelemetry = "0.28"
+# Bridges `tracing` events to OTel log records, the analogue of the Go module's otelslog bridge.
+# Pinned to 0.27 to match the four crates above: the HTTP/SQL/runtime instrumentation crates have
+# no 0.27 release at all, so this is the only automatic instrumentation available without a
+# migration to 0.32 - see rust/README.md.
+opentelemetry-appender-tracing = "0.27"
 
 [dev-dependencies]
 # default-features off + rustls-tls: avoids linking against system OpenSSL (native-tls), which

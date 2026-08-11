@@ -18,6 +18,9 @@ import (
 func newMux(service *FruitService) *http.ServeMux {
 	mux := http.NewServeMux()
 
+	// No per-route OpenTelemetry wiring here on purpose: otelhttp wraps the whole mux (see main.go)
+	// and picks up http.route from r.Pattern, which ServeMux sets on the request once it matches.
+	// That keeps span names low-cardinality on /fruits/{name} without touching the handlers.
 	mux.HandleFunc("GET /fruits", func(w http.ResponseWriter, r *http.Request) {
 		fruits, err := service.GetAllFruits(r.Context())
 		if err != nil {

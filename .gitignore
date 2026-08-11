@@ -19,3 +19,5 @@ buildNumber.properties
 /.profileconfig.json
 .claude
 **/.DS_Store
+/__pycache__/
+/results/__pycache__/

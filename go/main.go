@@ -12,10 +12,13 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/exaring/otelpgx"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"
+	"gorm.io/plugin/opentelemetry/tracing"
 )
 
 func main() {
@@ -27,9 +30,9 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM)
 	defer stop()
 
-	shutdownTracing, err := initTracing(ctx)
+	shutdownTelemetry, err := initTelemetry(ctx)
 	if err != nil {
-		slog.Error("failed to init tracing", "error", err)
+		slog.Error("failed to init telemetry", "error", err)
 		os.Exit(1)
 	}
 
@@ -55,7 +58,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	server := &http.Server{Handler: mux}
+	// The HTTP server span and the http.server.* metrics that quarkus3-virtual gets from its REST
+	// layer. Without this the module reported a single service-level span per request against
+	// Quarkus's two to three, which understated its observability cost in the benchmark. Skipped
+	// when telemetry is off so that path keeps costing nothing.
+	var handler http.Handler = mux
+	if otelEnabled() {
+		handler = otelhttp.NewHandler(mux, "http.server")
+	}
+
+	server := &http.Server{Handler: handler}
 
 	go func() {
 		<-ctx.Done()
@@ -74,14 +86,19 @@ func main() {
 		"go 1.0 (net/http, query mode=%s) started in %.3fs. Listening on: http://0.0.0.0:%s\n",
 		queryMode, time.Since(start).Seconds(), port,
 	)
-	fmt.Printf("go configuration: otel=%s\n", otelStatus())
+	// Through slog, not fmt: it is the module's only log record on a clean run, and without it the
+	// OTLP log pipeline carries nothing and the service never appears in Loki - every other slog
+	// call here is an Error that only fires on failure. quarkus3-virtual populates Loki the same
+	// way, from its own startup lines. The readiness line above stays on fmt so the pipeline's
+	// logFileStartedRegex keeps matching a bare, unprefixed line.
+	slog.Info("go configuration", "queryMode", queryMode, "otel", otelStatus())
 
 	if err := server.Serve(listener); err != nil && err != http.ErrServerClosed {
 		slog.Error("server error", "error", err)
 	}
 
 	closeDB()
-	_ = shutdownTracing(context.Background())
+	_ = shutdownTelemetry(context.Background())
 }
 
 // Same defaults as the Node.js and Rust modules - every sibling module hardcodes localhost:5432
@@ -98,6 +115,14 @@ func connect(ctx context.Context, queryMode string) (FruitRepository, func(), er
 		db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{Logger: gormlogger.Default.LogMode(gormlogger.Silent)})
 		if err != nil {
 			return nil, nil, err
+		}
+
+		// The SQL spans Hibernate emits in the Quarkus modules; otelpgx does the same job on the
+		// raw-SQL path below.
+		if otelEnabled() {
+			if err := db.Use(tracing.NewPlugin()); err != nil {
+				return nil, nil, err
+			}
 		}
 
 		sqlDB, err := db.DB()
@@ -117,6 +142,10 @@ func connect(ctx context.Context, queryMode string) (FruitRepository, func(), er
 	}
 
 	cfg.MaxConns = int32(poolMax())
+
+	if otelEnabled() {
+		cfg.ConnConfig.Tracer = otelpgx.NewTracer()
+	}
 
 	pool, err := pgxpool.NewWithConfig(ctx, cfg)
 	if err != nil {
@@ -147,8 +176,12 @@ func envOrDefault(key, fallback string) string {
 	return fallback
 }
 
+func otelEnabled() bool {
+	return os.Getenv("OTEL_SDK_DISABLED") != "true"
+}
+
 func otelStatus() string {
-	if os.Getenv("OTEL_SDK_DISABLED") == "true" {
+	if !otelEnabled() {
 		return "off"
 	}
 

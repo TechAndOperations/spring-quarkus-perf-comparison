@@ -8,6 +8,7 @@ import 'reflect-metadata';
 
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { logs, SeverityNumber } from '@opentelemetry/api-logs';
 
 import { AppModule } from './app.module';
 import { queryMode } from './repository/fruit.repository';
@@ -30,7 +31,19 @@ async function bootstrap(): Promise<void> {
   // Logged on its own line, after the readiness line, so the benchmark log records which read
   // implementation produced the numbers. Keep it off the readiness line to avoid disturbing the
   // pipeline's startup regex.
-  console.log(`nodejs configuration: query mode=${queryMode()}, compile cache=${process.env.NODE_COMPILE_CACHE_DISABLED === 'true' ? 'off' : 'on'}, otel=${process.env.OTEL_SDK_DISABLED === 'true' ? 'off' : 'on'}`);
+  const configuration = `nodejs configuration: query mode=${queryMode()}, compile cache=${process.env.NODE_COMPILE_CACHE_DISABLED === 'true' ? 'off' : 'on'}, otel=${process.env.OTEL_SDK_DISABLED === 'true' ? 'off' : 'on'}`;
+  console.log(configuration);
+
+  // Same line through the logs API, so the third signal carries something: NestJS runs with
+  // `logger: false` and everything else here is console.log, which no instrumentation picks up -
+  // without this the exporter stays idle and the service never appears in Loki. Emitted on top of
+  // the console write, not instead of it: the benchmark's app log is the only place a failing
+  // exporter is visible. No-op when OTEL_SDK_DISABLED leaves the global provider unset.
+  logs.getLogger('nodejs').emit({
+    severityNumber: SeverityNumber.INFO,
+    severityText: 'INFO',
+    body: configuration
+  });
 }
 
 bootstrap();
