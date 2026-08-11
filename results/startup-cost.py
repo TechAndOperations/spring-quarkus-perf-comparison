@@ -25,7 +25,10 @@ from pathlib import Path
 from _chartlib import (
     FAMILY_LABEL,
     SHAPE_LABEL,
+    core_counts,
+    cores_label,
     fmt,
+    heap_note,
     kind,
     load_startup,
     log_scale,
@@ -34,7 +37,7 @@ from _chartlib import (
     svg,
 )
 
-OUT = Path(__file__).resolve().parent / "startup-cost.svg"
+STEM = Path(__file__).resolve().parent / "startup-cost"
 W, H = 900, 560
 M = {"t": 122, "r": 168, "b": 66, "l": 74}
 PW, PH = W - M["l"] - M["r"], H - M["t"] - M["b"]
@@ -54,8 +57,8 @@ LABEL_AT = {
 }
 
 
-def build():
-    rows = median_run(load_startup(), key=lambda r: r[2])
+def build(cores):
+    rows = median_run(load_startup(cores), key=lambda r: r[2])
     xlo, xhi, xt = log_scale([r[2] for r in rows])
     ylo, yhi, yt = log_scale([r[3] for r in rows])
     lg = math.log10
@@ -76,7 +79,7 @@ def build():
     )
     o.append(
         f'<text x="{M["l"]}" y="50" fill="{ink2}" font-size="12.5">'
-        f"Un point par runtime, run de TTFR médian · 3 itérations, 2 cœurs · "
+        f"Un point par runtime, run de TTFR médian · {cores_label(cores)} · "
         f"en bas à gauche, le moins coûteux</text>"
     )
     o.append(
@@ -115,9 +118,9 @@ def build():
         f'font-size="12" text-anchor="middle">RSS après la 1ʳᵉ requête (MiB, échelle log)</text>'
     )
 
-    for rt, xmx, ttfr, rss in sorted(rows, key=lambda r: r[2]):
+    for rt, xmx, ttfr, rss, _c in sorted(rows, key=lambda r: r[2]):
         fam, shape = kind(rt)
-        heap = f" · -Xmx{xmx}m" if xmx else ""
+        note = heap_note(xmx)
         o.append(
             marker(
                 shape,
@@ -125,14 +128,16 @@ def build():
                 py(rss),
                 f"var(--{fam})",
                 surface,
-                f"{rt}{heap} · {ttfr:.0f} ms · {rss:.1f} MiB",
+                f"{rt} · {note} · {ttfr:.0f} ms · {rss:.1f} MiB",
                 r=7.0,
             )
         )
         # The RSS rides in the label so each point states its own y value; below 10 MiB
-        # a decimal still carries information, above it the integer is enough.
+        # a decimal still carries information, above it the integer is enough. The core
+        # count is abbreviated to `2c`: spelled out it pushed the longest labels past the
+        # axis, and two points of one runtime differ only by it.
         shown = f"{rss:.1f}" if rss < 10 else f"{rss:.0f}"
-        dy, anchor = LABEL_AT[rt]
+        dy, anchor = LABEL_AT.get(rt, (-17, "middle"))
         o.append(
             f'<text x="{px(ttfr):.1f}" y="{py(rss) + dy:.1f}" fill="{ink2}" '
             f'font-size="10.5" text-anchor="{anchor}">{rt} · {shown} MiB</text>'
@@ -153,5 +158,7 @@ def build():
     return svg(W, H, "".join(o))
 
 
-OUT.write_text(build())
-print(f"écrit: {OUT}")
+for _cores in core_counts():
+    out = Path(f"{STEM}-{_cores}c.svg")
+    out.write_text(build(_cores))
+    print(f"écrit: {out}")

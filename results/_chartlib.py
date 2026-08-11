@@ -30,6 +30,9 @@ KIND = {
     "go-orm": ("other", "square"),
     "rust-orm": ("other", "square"),
     "nodejs-orm": ("other", "circle"),
+    "go-sql": ("other", "square"),
+    "rust-sql": ("other", "square"),
+    "nodejs-sql": ("other", "circle"),
 }
 
 CSS = """
@@ -47,25 +50,62 @@ def kind(runtime):
     return KIND.get(runtime, ("other", "circle"))
 
 
-def load():
-    """(runtime, xmx|None, throughput, rss, density) for every archived run."""
+def included(runtime):
+    """Charts cover the ORM path only. The -sql variants answer a different question -
+    hand-written SQL against the ecosystem's ORM, at runtime constant - and would double
+    an already crowded axis. They stay in the README table."""
+    return not runtime.endswith("-sql")
+
+
+def cores_of(data):
+    """Cores pinned to the app. Runs at different core counts are not comparable, so
+    every consumer groups on this alongside the runtime name."""
+    return str(((data.get("config") or {}).get("resources") or {}).get("app_cpus") or "?")
+
+
+def cores_label(cores):
+    return f"{cores} cœur" + ("" if cores == "1" else "s")
+
+
+def heap_note(xmx):
+    """What distinguishes two points of the same runtime *within* one chart. The core
+    count is not in here: each chart covers a single core count and says so in its
+    subtitle, because runs across core counts are not comparable at all."""
+    return f"-Xmx {xmx}m" if xmx else "sans plafond"
+
+
+def core_counts():
+    """Core counts present in the archive, densest first - one chart set per count."""
+    return sorted({r[-1] for r in load()}, key=lambda c: -int(c))
+
+
+def load(cores=None):
+    """(runtime, xmx|None, throughput, rss, density, cores), optionally one core count.
+
+    Cores come last so existing index-based unpacking keeps working."""
     rows = []
     for f in sorted(glob.glob(str(HERE / "*.json"))):
         m = re.search(r"Xmx(\d+)m", f)
         xmx = int(m.group(1)) if m else None
-        for rt, v in json.load(open(f))["results"].items():
+        data = json.load(open(f))
+        c = cores_of(data)
+        if cores and c != cores:
+            continue
+        for rt, v in data["results"].items():
             load_ = v.get("load") or {}
             tp, rss = load_.get("avThroughput"), load_.get("avMaxRss")
             if not (tp and rss):
                 continue
             d = load_.get("maxThroughputDensity") or tp / rss
             # -Xmx only reaches the Quarkus and Spring runCmds; elsewhere it is noise.
-            rows.append((rt, xmx if kind(rt)[0] != "other" else None, tp, rss, d))
+            if included(rt):
+                rows.append((rt, xmx if kind(rt)[0] != "other" else None, tp, rss, d, c))
     return rows
 
 
-def load_startup():
-    """(runtime, xmx|None, ttfr_ms, rss_first_request_mib) for every run that has them.
+def load_startup(cores=None):
+    """(runtime, xmx|None, ttfr_ms, rss_first_request_mib, cores), optionally one core
+    count.
 
     Only produced when the run included measure-time-to-first-request and measure-rss.
     """
@@ -73,21 +113,25 @@ def load_startup():
     for f in sorted(glob.glob(str(HERE / "*.json"))):
         m = re.search(r"Xmx(\d+)m", f)
         xmx = int(m.group(1)) if m else None
-        for rt, v in json.load(open(f))["results"].items():
+        data = json.load(open(f))
+        c = cores_of(data)
+        if cores and c != cores:
+            continue
+        for rt, v in data["results"].items():
             ttfr = (v.get("startup") or {}).get("avStartTime")
             rss = (v.get("rss") or {}).get("avFirstRequestRss")
-            if ttfr and rss:
-                rows.append((rt, xmx if kind(rt)[0] != "other" else None, ttfr, rss))
+            if ttfr and rss and included(rt):
+                rows.append((rt, xmx if kind(rt)[0] != "other" else None, ttfr, rss, c))
     return rows
 
 
 def median_run(rows, key):
-    """One representative run per runtime: the median by `key`, kept as a real
+    """One representative run per runtime and core count: the median by `key`, kept as a real
     observation so the reported pair was actually measured together rather than
     assembled from different rungs."""
     grouped = {}
     for row in rows:
-        grouped.setdefault(row[0], []).append(row)
+        grouped.setdefault((row[0], row[-1]), []).append(row)
     out = []
     for rt, runs in grouped.items():
         runs.sort(key=key)
@@ -164,18 +208,18 @@ def bar(x, y, w, h, fill, tip):
     return f'<path d="{d}" fill="{fill}"><title>{tip}</title></path>'
 
 
-def best_per_runtime(key):
-    """The rung that maximises `key` for each runtime, ranked.
+def best_per_runtime(key, cores=None):
+    """The rung that maximises `key` for each runtime *and core count*, ranked.
 
     Ties keep the roomier heap - the safer default when two ceilings score the same.
     Which rung wins depends on the measure: density peaks at a tight heap, raw
     throughput at a generous one.
     """
     best = {}
-    for row in load():
-        rt, xmx = row[0], row[1]
-        if rt not in best or (key(row), xmx or 0) > (key(best[rt]), best[rt][1] or 0):
-            best[rt] = row
+    for row in load(cores):
+        g = (row[0], row[-1])  # runtime x cores: a 1-core run is not a 2-core run
+        if g not in best or (key(row), row[1] or 0) > (key(best[g]), best[g][1] or 0):
+            best[g] = row
     return sorted(best.values(), key=lambda r: -key(r))
 
 

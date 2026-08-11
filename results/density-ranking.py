@@ -16,9 +16,10 @@ represents honestly.
 import math
 from pathlib import Path
 
-from _chartlib import FAMILY_LABEL, SHAPE_LABEL, best_per_runtime, kind, log_scale, marker, svg
+from _chartlib import (FAMILY_LABEL, core_counts, cores_label, SHAPE_LABEL, best_per_runtime, heap_note, kind,
+                       log_scale, marker, svg)
 
-OUT = Path(__file__).resolve().parent / "density-ranking.svg"
+STEM = Path(__file__).resolve().parent / "density-ranking"
 W, H = 900, 530
 # t leaves room for three header lines *and* a clear gap before the legend, which is
 # drawn just above the plot at t-24: at t=92 the third line ended one pixel above it.
@@ -26,8 +27,8 @@ M = {"t": 122, "r": 26, "b": 96, "l": 68}
 PW, PH = W - M["l"] - M["r"], H - M["t"] - M["b"]
 
 
-def build():
-    rows = best_per_runtime(lambda r: r[4])
+def build(cores):
+    rows = best_per_runtime(lambda r: r[4], cores)
     ylo, yhi, yt = log_scale([r[4] for r in rows])
     lg = math.log10
 
@@ -45,8 +46,8 @@ def build():
     )
     o.append(
         f'<text x="{M["l"]}" y="50" fill="{ink2}" font-size="12.5">'
-        f"Requêtes par seconde et par MiB de RSS sous charge · 3 itérations, 2 cœurs · "
-        f"ordonnée logarithmique</text>"
+        f"Requêtes par seconde et par MiB de RSS sous charge · 3 itérations par run · "
+        f"{cores_label(cores)} · ordonnée logarithmique</text>"
     )
     o.append(
         f'<text x="{M["l"]}" y="67" fill="{ink2}" font-size="11.5">'
@@ -65,11 +66,11 @@ def build():
             f'text-anchor="end">{t:.0f}</text>'
         )
 
-    for i, (rt, xmx, tp, rss, dens) in enumerate(rows):
+    for i, (rt, xmx, tp, rss, dens, _c) in enumerate(rows):
         cx = M["l"] + i * slot + slot / 2
         y = py(dens)
         fam, shape = kind(rt)
-        heap = f"-Xmx {xmx}m · " if xmx else ""
+        note = heap_note(xmx)
 
         # A faint drop line to the category tick: on a log axis there is no zero to
         # anchor a stem to, so this only helps the eye find the column, and stays
@@ -85,7 +86,7 @@ def build():
                 y,
                 f"var(--{fam})",
                 surface,
-                f"{rt} · {heap}{dens:.2f} tps/MiB · {tp:.0f} req/s · {rss:.1f} MiB",
+                f"{rt} · {note} · {dens:.2f} tps/MiB · {tp:.0f} req/s · {rss:.1f} MiB",
                 r=8.0,
             )
         )
@@ -99,7 +100,7 @@ def build():
         )
         o.append(
             f'<text x="{cx:.1f}" y="{M["t"] + PH + 36:.0f}" fill="{ink2}" font-size="10.5" '
-            f'text-anchor="middle">{heap or "sans plafond"}</text>'
+            f'text-anchor="middle">{note}</text>'
         )
         o.append(
             f'<text x="{cx:.1f}" y="{M["t"] + PH + 50:.0f}" fill="{ink2}" font-size="10.5" '
@@ -123,5 +124,7 @@ def build():
     return svg(W, H, "".join(o))
 
 
-OUT.write_text(build())
-print(f"écrit: {OUT}")
+for _cores in core_counts():
+    out = Path(f"{STEM}-{_cores}c.svg")
+    out.write_text(build(_cores))
+    print(f"écrit: {out}")
