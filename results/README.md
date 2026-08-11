@@ -109,6 +109,29 @@ Le script nomme le fichier d'après le run lui-même — horodatage de démarrag
 configuration mémoire et nombre d'itérations — puis remplit les deux tableaux ci-dessous. Il refuse
 les runs avortés (section `results` vide) et ne duplique pas un run déjà archivé.
 
+## Graphiques
+
+Régénérés depuis les JSON archivés, à relancer après chaque `archive.py` :
+
+```sh
+./throughput-vs-rss.py     # nuage connecté : débit × RSS, une ligne par runtime
+./density-ranking.py       # barres : densité, meilleur palier de chaque runtime
+```
+
+![Débit et empreinte mémoire selon le plafond de tas](throughput-vs-rss.svg)
+
+Chaque point est un run ; les lignes suivent un runtime de `-Xmx` 512 Mo vers 64 Mo.
+La couleur porte le framework, la forme le mode d'exécution — un nuage de points
+valide la palette sur toutes les paires et non seulement les paires adjacentes, et
+seuls trois créneaux catégoriels franchissent ce seuil, donc quatre runtimes ne
+peuvent pas prendre chacun une teinte.
+
+![Densité de débit, meilleure configuration de chaque runtime](density-ranking.svg)
+
+Ici un seul palier par runtime, celui de densité maximale. Le nuage ci-dessus garde
+le balayage complet : les deux répondent à des questions différentes — jusqu'où
+chaque runtime peut aller, et par quel chemin.
+
 ## Runs
 
 | Fichier | Début (UTC) | Runtimes | Itér. | Config JVM | Scénario |
