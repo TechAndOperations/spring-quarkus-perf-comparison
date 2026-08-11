@@ -114,23 +114,37 @@ les runs avortés (section `results` vide) et ne duplique pas un run déjà arch
 Régénérés depuis les JSON archivés, à relancer après chaque `archive.py` :
 
 ```sh
-./throughput-vs-rss.py     # nuage connecté : débit × RSS, une ligne par runtime
-./density-ranking.py       # barres : densité, meilleur palier de chaque runtime
+./throughput-ranking.py    # barres : débit maximal de chaque runtime
+./density-ranking.py       # points : densité maximale de chaque runtime
+./startup-cost.py          # nuage : TTFR × RSS après la 1ʳᵉ requête
 ```
 
-![Débit et empreinte mémoire selon le plafond de tas](throughput-vs-rss.svg)
+Les deux partagent `_chartlib.py` — chargement, échelles, marques, palette. La
+couleur porte la famille (Quarkus, Spring, non-JVM) et la forme le mode d'exécution :
+sept runtimes dépassent les trois créneaux catégoriels que la validation « toutes
+paires » autorise, d'où cet encodage composite.
 
-Chaque point est un run ; les lignes suivent un runtime de `-Xmx` 512 Mo vers 64 Mo.
-La couleur porte le framework, la forme le mode d'exécution — un nuage de points
-valide la palette sur toutes les paires et non seulement les paires adjacentes, et
-seuls trois créneaux catégoriels franchissent ce seuil, donc quatre runtimes ne
-peuvent pas prendre chacun une teinte.
+![Débit maximal atteint par chaque runtime](throughput-ranking.svg)
 
 ![Densité de débit, meilleure configuration de chaque runtime](density-ranking.svg)
 
-Ici un seul palier par runtime, celui de densité maximale. Le nuage ci-dessus garde
-le balayage complet : les deux répondent à des questions différentes — jusqu'où
-chaque runtime peut aller, et par quel chemin.
+Chaque runtime n'apparaît qu'une fois, à son meilleur palier — et **ce n'est pas le
+même palier selon la mesure** : le débit brut culmine à `-Xmx` 512 ou 384 Mo, la
+densité à 128 Mo. Le classement s'en trouve partiellement inversé, Rust étant premier
+en densité et cinquième en débit.
+
+La densité est un tracé par points sur axe logarithmique, pas des barres : elle
+s'étale sur un facteur 62, et la longueur d'une barre *étant* la magnitude, un axe
+log en fausserait tous les rapports. Un point encode par position, ce que le log
+représente honnêtement.
+
+![Coût de démarrage : délai et mémoire avant la première réponse](startup-cost.svg)
+
+Les deux coûts payés avant d'avoir servi quoi que ce soit, croisés sur un nuage
+plutôt que juxtaposés en deux séries — des unités différentes sur un même graphique
+imposeraient un double axe. Un point par runtime, pris sur le run de TTFR médian ;
+`-Xmx` ne déplace presque pas ces mesures chez Quarkus mais décale le RSS de première
+requête de 31 % chez Spring, ce qu'un point unique masque nécessairement.
 
 ## Runs
 
@@ -141,6 +155,7 @@ chaque runtime peut aller, et par quel chemin.
 | [`20260810_1925__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx256m-ParallelGC_3it.json`](20260810_1925__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx256m-ParallelGC_3it.json) | 2026-08-10T19:25:33Z | quarkus3-native, quarkus3-virtual, spring4-native, spring4-virtual | 3 | `-Xmx256m` `-XX:+UseParallelGC` | tuned |
 | [`20260811_0338__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx128m-ParallelGC_3it.json`](20260811_0338__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx128m-ParallelGC_3it.json) | 2026-08-11T03:38:27Z | quarkus3-native, quarkus3-virtual, spring4-native, spring4-virtual | 3 | `-Xmx128m` `-XX:+UseParallelGC` | tuned |
 | [`20260811_0548__quarkus3-native__Xmx64m-ParallelGC_3it.json`](20260811_0548__quarkus3-native__Xmx64m-ParallelGC_3it.json) | 2026-08-11T05:48:17Z | quarkus3-native | 3 | `-Xmx64m` `-XX:+UseParallelGC` | tuned |
+| [`20260811_0655__go-orm+nodejs-orm+rust-orm__Xms512m-Xmx512m_ParallelGC_3it.json`](20260811_0655__go-orm+nodejs-orm+rust-orm__Xms512m-Xmx512m_ParallelGC_3it.json) | 2026-08-11T06:55:09Z | go-orm, nodejs-orm, rust-orm | 3 | `-Xms512m -Xmx512m` `-XX:+UseParallelGC` | tuned |
 <!-- runs -->
 
 ## Résultats
@@ -166,6 +181,9 @@ Une ligne par runtime, moyennée sur les itérations du run.
 | `20260811_0338` | spring4-native | 2 | 128m | 521.3 | 1 027 | 233.3 | 250.2 | 1 501 | 6.10 |
 | `20260811_0338` | spring4-virtual | 2 | 128m | 6.1 | 9 278 | 341.2 | 431.7 | 4 955 | 12.05 |
 | `20260811_0548` | quarkus3-native | 2 | 64m | 315.7 | 111 | 99.3 | 142.0 | 2 798 | 20.69 |
+| `20260811_0655` | go-orm | 2 | - | 43.7 | 51 | 28.7 | 51.4 | 3 128 | 62.57 |
+| `20260811_0655` | nodejs-orm | 2 | - | 6.0 | 1 557 | 151.4 | 231.3 | 680 | 3.00 |
+| `20260811_0655` | rust-orm | 2 | - | 254.5 | 29 | 8.2 | 13.6 | 2 455 | 186.62 |
 <!-- results -->
 
 ### Origine des colonnes
