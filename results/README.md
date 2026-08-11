@@ -98,6 +98,33 @@ Ces différences ne sont pas des défauts : chaque ORM applique le défaut idiom
 écosystème. Elles signifient simplement que le benchmark compare **des applications au comportement
 identique mais au travail interne différent**.
 
+### Temps de chauffe
+
+Les runtimes à compilation à la volée — la JVM pour Quarkus et Spring, V8 pour Node —
+ne servent pas leurs premières requêtes à la vitesse qu'ils atteindront ensuite. Le
+code démarre interprété, puis est compilé par paliers ; côté HotSpot, seul le passage
+au compilateur C2 donne le régime définitif. Les images natives GraalVM, Go et Rust
+n'ont pas cette phase : leur code est déjà compilé au lancement.
+
+Le pipeline le prend en compte — 2 minutes de warmup, 30 secondes de pause, puis 30
+secondes de mesure — mais ça atténue le phénomène sans garantir que C2 ait terminé.
+Deux traces le montrent dans les mesures de cette archive.
+
+**Les latences de queue du warmup sont d'un autre ordre.** Sur un run
+`quarkus3-virtual`, la phase de chauffe monte à 2,11 s au maximum et 1,82 s au
+p99.99, contre 68 ms et 59 ms sur la phase mesurée juste après. Un facteur 30.
+
+**La dispersion entre itérations sépare nettement les deux familles.** À réglages
+identiques, `quarkus3-native` varie de 0,8 % d'une itération à l'autre là où
+`quarkus3-virtual` varie de 9,3 %. Sur les runtimes JIT, un écart inférieur à ~10 %
+entre deux configurations n'est donc pas nécessairement significatif — plusieurs
+comparaisons de cette archive tombent sous ce seuil.
+
+La [PR #681](https://github.com/quarkusio/spring-quarkus-perf-comparison/pull/681)
+propose une amélioration du protocole sur ce point : s'assurer que la phase C2 est
+bien terminée avant de commencer à mesurer, plutôt que de le supposer d'après une
+durée de warmup fixe.
+
 ## Archiver un run
 
 ```sh
@@ -119,31 +146,53 @@ Régénérés depuis les JSON archivés, à relancer après chaque `archive.py` 
 ./throughput-ranking.py    # barres : débit maximal de chaque runtime
 ```
 
+Chaque script produit **un jeu par nombre de cœurs** trouvé dans l'archive, suffixé
+`-2c` ou `-1c`. Des runs à nombres de cœurs différents ne sont pas comparables, donc
+ils ne partagent pas un graphique.
+
 Les trois partagent `_chartlib.py` — chargement, échelles, marques, palette. La
 couleur porte la famille (Quarkus, Spring, non-JVM) et la forme le mode d'exécution :
 sept runtimes dépassent les trois créneaux catégoriels que la validation « toutes
-paires » autorise, d'où cet encodage composite.
+paires » autorise, d'où cet encodage composite. Seul le chemin **ORM** est représenté ;
+les variantes `-sql` répondent à une autre question et restent dans le tableau.
 
-![Densité de débit, meilleure configuration de chaque runtime](density-ranking.svg)
+### 2 cœurs
+
+![Densité de débit, 2 cœurs](density-ranking-2c.svg)
 
 Un tracé par points sur axe logarithmique, pas des barres : la densité s'étale sur un
 facteur 62, et la longueur d'une barre *étant* la magnitude, un axe log en fausserait
 tous les rapports. Un point encode par position, ce que le log représente honnêtement.
 
-![Coût de démarrage : délai et mémoire avant la première réponse](startup-cost.svg)
+![Coût de démarrage, 2 cœurs](startup-cost-2c.svg)
 
 Les deux coûts payés avant d'avoir servi quoi que ce soit, croisés sur un nuage plutôt
 que juxtaposés en deux séries — des unités différentes sur un même graphique
-imposeraient un double axe. Un point par runtime, pris sur le run de TTFR médian ;
-`-Xmx` ne déplace presque pas ces mesures chez Quarkus mais décale le RSS de première
-requête de 31 % chez Spring, ce qu'un point unique masque nécessairement.
+imposeraient un double axe.
 
-![Débit maximal atteint par chaque runtime](throughput-ranking.svg)
+![Débit maximal, 2 cœurs](throughput-ranking-2c.svg)
 
 Chaque runtime n'apparaît qu'une fois, à son meilleur palier — et **ce n'est pas le
 même palier selon la mesure** : le débit brut culmine à `-Xmx` 512 ou 384 Mo, la
 densité à 128 Mo. Le classement s'en trouve partiellement inversé, Rust étant premier
 en densité et cinquième en débit.
+
+### 1 cœur
+
+Un seul run, du 11/08/2026 : les dix runtimes à `-Xmx128m`, Node à
+`--max-old-space-size=512`. Chaque runtime n'a donc qu'une configuration ici, là où le
+jeu à 2 cœurs résume un balayage mémoire.
+
+![Densité de débit, 1 cœur](density-ranking-1c.svg)
+
+![Coût de démarrage, 1 cœur](startup-cost-1c.svg)
+
+![Débit maximal, 1 cœur](throughput-ranking-1c.svg)
+
+Les quatre runtimes Java conservent **56,5 % ± 0,3** de leur débit à 2 cœurs, sauf
+`spring4-native` à 51,2 %. Une montée en charge légèrement super-linéaire : le second
+cœur n'était pas exploité à 100 %, ce qui est cohérent avec une charge partagée entre
+traitement applicatif et attente de PostgreSQL.
 
 ## Runs
 
@@ -158,6 +207,7 @@ en densité et cinquième en débit.
 | [`20260811_0914__nodejs-orm__node384m_3it.json`](20260811_0914__nodejs-orm__node384m_3it.json) | 2026-08-11T09:14:36Z | nodejs-orm | 3 | `--max-old-space-size=384` | tuned |
 | [`20260811_0935__nodejs-orm__node256m_3it.json`](20260811_0935__nodejs-orm__node256m_3it.json) | 2026-08-11T09:35:45Z | nodejs-orm | 3 | `--max-old-space-size=256` | tuned |
 | [`20260811_0956__nodejs-orm__node128m_3it.json`](20260811_0956__nodejs-orm__node128m_3it.json) | 2026-08-11T09:56:40Z | nodejs-orm | 3 | `--max-old-space-size=128` | tuned |
+| [`20260811_1031__10runtimes__Xmx128m-ParallelGC_node512m_3it.json`](20260811_1031__10runtimes__Xmx128m-ParallelGC_node512m_3it.json) | 2026-08-11T10:31:06Z | go-orm, go-sql, nodejs-orm, nodejs-sql, quarkus3-native, quarkus3-virtual, rust-orm, rust-sql, spring4-native, spring4-virtual | 3 | `-Xmx128m` `-XX:+UseParallelGC` `--max-old-space-size=512` | tuned |
 <!-- runs -->
 
 ## Résultats
@@ -189,6 +239,16 @@ Une ligne par runtime, moyennée sur les itérations du run.
 | `20260811_0914` | nodejs-orm | 2 | 384m | 5.6 | 1 567 | 151.3 | 231.1 | 677 | 3.05 |
 | `20260811_0935` | nodejs-orm | 2 | 256m | 6.3 | 1 747 | 151.4 | 225.8 | 661 | 3.00 |
 | `20260811_0956` | nodejs-orm | 2 | 128m | 5.9 | 1 698 | 151.0 | 226.1 | 700 | 3.11 |
+| `20260811_1031` | go-orm | 1 | - | 84.6 | 43 | 28.1 | 48.4 | 2 111 | 45.00 |
+| `20260811_1031` | go-sql | 1 | - | 84.2 | 37 | 27.8 | 44.5 | 4 605 | 110.55 |
+| `20260811_1031` | nodejs-orm | 1 | 512m | 7.3 | 1 761 | 180.0 | 219.9 | 521 | 2.47 |
+| `20260811_1031` | nodejs-sql | 1 | 512m | 6.8 | 1 693 | 160.3 | 212.1 | 972 | 4.63 |
+| `20260811_1031` | quarkus3-native | 1 | 128m | 588.0 | 101 | 99.0 | 162.6 | 1 922 | 11.89 |
+| `20260811_1031` | quarkus3-virtual | 1 | 128m | 22.2 | 6 154 | 239.1 | 347.6 | 3 604 | 10.74 |
+| `20260811_1031` | rust-orm | 1 | - | 391.0 | 24 | 8.2 | 13.1 | 2 468 | 191.21 |
+| `20260811_1031` | rust-sql | 1 | - | 389.7 | 24 | 8.1 | 13.2 | 4 127 | 321.11 |
+| `20260811_1031` | spring4-native | 1 | 128m | 946.6 | 1 047 | 238.6 | 251.0 | 769 | 3.18 |
+| `20260811_1031` | spring4-virtual | 1 | 128m | 10.5 | 18 374 | 336.0 | 430.1 | 2 793 | 6.81 |
 <!-- results -->
 
 ### Origine des colonnes
@@ -218,3 +278,20 @@ réflexion GraalVM ne figurent pas dans le tableau mais restent dans le JSON arc
   comparables aux suivants. Les modules Quarkus et Spring ne sont pas concernés.
 - **La densité hérite du budget mémoire.** C'est un ratio débit/RSS sous charge, donc un `-Xmx`
   généreux la dégrade mécaniquement sans que le runtime soit en cause.
+
+## Pour aller plus loin
+
+Les billets du perf lab Quarkus, qui documentent la méthodologie de ce banc et les
+pièges rencontrés en le construisant :
+
+- [Fairness in benchmarking](https://quarkus.io/blog/fairness-in-benchmarking/) — ce
+  que « comparer à égalité » veut dire, et pourquoi c'est plus difficile qu'il n'y
+  paraît
+- [When the JIT can't keep up](https://quarkus.io/blog/when-the-jit-cant-keep-up/) —
+  le temps de chauffe et ses effets sur la mesure
+- [The hidden cost of rootless container networking](https://quarkus.io/blog/hidden-cost-rootless-container-networking/)
+  — comment l'environnement d'exécution fausse les chiffres
+- [Reflection-free Jackson serializers](https://quarkus.io/blog/reflection-free-jsckson-serializers/)
+  — l'optimisation activée ici par `enable-reflection-free-serializers`
+- [New benchmarks](https://quarkus.io/blog/new-benchmarks/) — la présentation du banc
+  et de ses résultats
