@@ -22,26 +22,64 @@ RUNS_MARKER = "<!-- runs -->"
 RESULTS_MARKER = "<!-- results -->"
 
 
-def condense(memory, args):
-    """`-Xms512m -Xmx512m` + `-XX:+UseParallelGC` -> `Xms512m-Xmx512m_ParallelGC`."""
-    parts = [t.lstrip("-") for t in (memory or "").split() if t]
-    for token in (args or "").split():
-        parts.append(token.replace("-XX:+Use", "").replace("-XX:+", "").lstrip("-"))
-    return "-".join(parts[:2]) + ("_" + "_".join(parts[2:]) if parts[2:] else "") or "default"
+def condense(runtimes, config):
+    """Name the memory setting that actually reached the runtimes under test.
+
+    config.jvm.memory is always populated, even on a Node-only run where it reaches
+    nothing - naming a file after it would make two Node runs at different heaps
+    indistinguishable. So the JVM part is dropped unless a Quarkus or Spring runtime
+    was measured, and Node's own ceiling is named when a Node runtime was.
+    """
+    jvm = config.get("jvm") or {}
+    parts = []
+
+    if any(rt.startswith(("quarkus", "spring")) for rt in runtimes):
+        parts += [t.lstrip("-") for t in (jvm.get("memory") or "").split() if t]
+        for token in (jvm.get("args") or "").split():
+            parts.append(token.replace("-XX:+Use", "").replace("-XX:+", "").lstrip("-"))
+
+    if any(rt.startswith("nodejs") for rt in runtimes):
+        found = re.search(r"--max-old-space-size=(\S+)", (config.get("node") or {}).get("args") or "")
+        if found:
+            parts.append(f"node{found.group(1)}m")
+
+    if not parts:
+        return "default"
+    return "-".join(parts[:2]) + ("_" + "_".join(parts[2:]) if parts[2:] else "")
 
 
-def heap_ceiling(runtime, memory):
-    """The -Xmx the runtime was actually given, or `-` when the flag does not reach it.
+def heap_ceiling(runtime, config):
+    """The heap ceiling this runtime was actually given, or `-` when it takes none.
 
     main.yml appends config.jvm.memory to every Quarkus and Spring runCmd, native images included -
-    GraalVM honours -Xmx just like the JVM. The Go and Rust runCmds take no memory flag at all, and
-    Node gets config.node.args (--max-old-space-size) instead, which is a different knob.
+    GraalVM honours -Xmx just like the JVM. Node gets config.node.args instead, a different flag for
+    the same job, so it belongs in the same column. The Go and Rust runCmds take no memory flag at
+    all.
     """
-    if not runtime.startswith(("quarkus", "spring")):
-        return "-"
+    if runtime.startswith(("quarkus", "spring")):
+        found = re.search(r"-Xmx(\S+)", (config.get("jvm") or {}).get("memory") or "")
+        return found.group(1) if found else "-"
 
-    found = re.search(r"-Xmx(\S+)", memory or "")
-    return found.group(1) if found else "-"
+    if runtime.startswith("nodejs"):
+        found = re.search(r"--max-old-space-size=(\S+)", (config.get("node") or {}).get("args") or "")
+        return f"{found.group(1)}m" if found else "-"
+
+    return "-"
+
+
+def config_label(runtimes, config):
+    """The runtime flags that actually applied, for the index table.
+
+    Showing config.jvm.memory on a Node-only run would advertise a setting that never
+    reached the process; Go and Rust take none at all.
+    """
+    jvm, node = config.get("jvm") or {}, config.get("node") or {}
+    bits = []
+    if any(rt.startswith(("quarkus", "spring")) for rt in runtimes):
+        bits += [f"`{v}`" for v in (jvm.get("memory"), jvm.get("args")) if v]
+    if any(rt.startswith("nodejs") for rt in runtimes) and node.get("args"):
+        bits.append(f"`{node['args']}`")
+    return " ".join(bits) or "sans plafond"
 
 
 def app_cores(resources):
@@ -90,7 +128,6 @@ def main():
 
     config = data.get("config") or {}
     timing = data.get("timing") or {}
-    jvm = config.get("jvm") or {}
     repo = config.get("repo") or {}
 
     stamp = (timing.get("start") or timing.get("stop") or "unknown")
@@ -100,7 +137,7 @@ def main():
     label = "+".join(runtimes) if len(runtimes) <= 4 else f"{len(runtimes)}runtimes"
     iterations = str(config.get("num_iterations") or "?")
 
-    name = f"{stamp}__{label}__{condense(jvm.get('memory'), jvm.get('args'))}_{iterations}it.json"
+    name = f"{stamp}__{label}__{condense(runtimes, config)}_{iterations}it.json"
     dest = HERE / name
 
     if dest.exists():
@@ -114,7 +151,7 @@ def main():
         f"| {timing.get('start', '?')} "
         f"| {', '.join(runtimes)} "
         f"| {iterations} "
-        f"| `{jvm.get('memory') or '-'}` `{jvm.get('args') or '-'}` "
+        f"| {config_label(runtimes, config)} "
         f"| {repo.get('scenario') or '-'} |"
     )
 
@@ -134,7 +171,7 @@ def main():
             f"| `{name.split('__')[0]}` "
             f"| {rt} "
             f"| {app_cores(config.get('resources'))} "
-            f"| {heap_ceiling(rt, jvm.get('memory'))} "
+            f"| {heap_ceiling(rt, config)} "
             f"| {num(build.get('avBuildTime'), 1)} "
             f"| {num(startup.get('avStartTime'), 0, thousands=True)} "
             f"| {num(rss.get('avFirstRequestRss'), 1)} "

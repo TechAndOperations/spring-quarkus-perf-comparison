@@ -114,37 +114,36 @@ les runs avortés (section `results` vide) et ne duplique pas un run déjà arch
 Régénérés depuis les JSON archivés, à relancer après chaque `archive.py` :
 
 ```sh
-./throughput-ranking.py    # barres : débit maximal de chaque runtime
 ./density-ranking.py       # points : densité maximale de chaque runtime
 ./startup-cost.py          # nuage : TTFR × RSS après la 1ʳᵉ requête
+./throughput-ranking.py    # barres : débit maximal de chaque runtime
 ```
 
-Les deux partagent `_chartlib.py` — chargement, échelles, marques, palette. La
+Les trois partagent `_chartlib.py` — chargement, échelles, marques, palette. La
 couleur porte la famille (Quarkus, Spring, non-JVM) et la forme le mode d'exécution :
 sept runtimes dépassent les trois créneaux catégoriels que la validation « toutes
 paires » autorise, d'où cet encodage composite.
 
-![Débit maximal atteint par chaque runtime](throughput-ranking.svg)
-
 ![Densité de débit, meilleure configuration de chaque runtime](density-ranking.svg)
+
+Un tracé par points sur axe logarithmique, pas des barres : la densité s'étale sur un
+facteur 62, et la longueur d'une barre *étant* la magnitude, un axe log en fausserait
+tous les rapports. Un point encode par position, ce que le log représente honnêtement.
+
+![Coût de démarrage : délai et mémoire avant la première réponse](startup-cost.svg)
+
+Les deux coûts payés avant d'avoir servi quoi que ce soit, croisés sur un nuage plutôt
+que juxtaposés en deux séries — des unités différentes sur un même graphique
+imposeraient un double axe. Un point par runtime, pris sur le run de TTFR médian ;
+`-Xmx` ne déplace presque pas ces mesures chez Quarkus mais décale le RSS de première
+requête de 31 % chez Spring, ce qu'un point unique masque nécessairement.
+
+![Débit maximal atteint par chaque runtime](throughput-ranking.svg)
 
 Chaque runtime n'apparaît qu'une fois, à son meilleur palier — et **ce n'est pas le
 même palier selon la mesure** : le débit brut culmine à `-Xmx` 512 ou 384 Mo, la
 densité à 128 Mo. Le classement s'en trouve partiellement inversé, Rust étant premier
 en densité et cinquième en débit.
-
-La densité est un tracé par points sur axe logarithmique, pas des barres : elle
-s'étale sur un facteur 62, et la longueur d'une barre *étant* la magnitude, un axe
-log en fausserait tous les rapports. Un point encode par position, ce que le log
-représente honnêtement.
-
-![Coût de démarrage : délai et mémoire avant la première réponse](startup-cost.svg)
-
-Les deux coûts payés avant d'avoir servi quoi que ce soit, croisés sur un nuage
-plutôt que juxtaposés en deux séries — des unités différentes sur un même graphique
-imposeraient un double axe. Un point par runtime, pris sur le run de TTFR médian ;
-`-Xmx` ne déplace presque pas ces mesures chez Quarkus mais décale le RSS de première
-requête de 31 % chez Spring, ce qu'un point unique masque nécessairement.
 
 ## Runs
 
@@ -156,6 +155,9 @@ requête de 31 % chez Spring, ce qu'un point unique masque nécessairement.
 | [`20260811_0338__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx128m-ParallelGC_3it.json`](20260811_0338__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx128m-ParallelGC_3it.json) | 2026-08-11T03:38:27Z | quarkus3-native, quarkus3-virtual, spring4-native, spring4-virtual | 3 | `-Xmx128m` `-XX:+UseParallelGC` | tuned |
 | [`20260811_0548__quarkus3-native__Xmx64m-ParallelGC_3it.json`](20260811_0548__quarkus3-native__Xmx64m-ParallelGC_3it.json) | 2026-08-11T05:48:17Z | quarkus3-native | 3 | `-Xmx64m` `-XX:+UseParallelGC` | tuned |
 | [`20260811_0655__go-orm+nodejs-orm+rust-orm__Xms512m-Xmx512m_ParallelGC_3it.json`](20260811_0655__go-orm+nodejs-orm+rust-orm__Xms512m-Xmx512m_ParallelGC_3it.json) | 2026-08-11T06:55:09Z | go-orm, nodejs-orm, rust-orm | 3 | `-Xms512m -Xmx512m` `-XX:+UseParallelGC` | tuned |
+| [`20260811_0914__nodejs-orm__node384m_3it.json`](20260811_0914__nodejs-orm__node384m_3it.json) | 2026-08-11T09:14:36Z | nodejs-orm | 3 | `--max-old-space-size=384` | tuned |
+| [`20260811_0935__nodejs-orm__node256m_3it.json`](20260811_0935__nodejs-orm__node256m_3it.json) | 2026-08-11T09:35:45Z | nodejs-orm | 3 | `--max-old-space-size=256` | tuned |
+| [`20260811_0956__nodejs-orm__node128m_3it.json`](20260811_0956__nodejs-orm__node128m_3it.json) | 2026-08-11T09:56:40Z | nodejs-orm | 3 | `--max-old-space-size=128` | tuned |
 <!-- runs -->
 
 ## Résultats
@@ -184,6 +186,9 @@ Une ligne par runtime, moyennée sur les itérations du run.
 | `20260811_0655` | go-orm | 2 | - | 43.7 | 51 | 28.7 | 51.4 | 3 128 | 62.57 |
 | `20260811_0655` | nodejs-orm | 2 | - | 6.0 | 1 557 | 151.4 | 231.3 | 680 | 3.00 |
 | `20260811_0655` | rust-orm | 2 | - | 254.5 | 29 | 8.2 | 13.6 | 2 455 | 186.62 |
+| `20260811_0914` | nodejs-orm | 2 | 384m | 5.6 | 1 567 | 151.3 | 231.1 | 677 | 3.05 |
+| `20260811_0935` | nodejs-orm | 2 | 256m | 6.3 | 1 747 | 151.4 | 225.8 | 661 | 3.00 |
+| `20260811_0956` | nodejs-orm | 2 | 128m | 5.9 | 1 698 | 151.0 | 226.1 | 700 | 3.11 |
 <!-- results -->
 
 ### Origine des colonnes
