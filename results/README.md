@@ -208,6 +208,9 @@ traitement applicatif et attente de PostgreSQL.
 | [`20260811_0935__nodejs-orm__node256m_3it.json`](20260811_0935__nodejs-orm__node256m_3it.json) | 2026-08-11T09:35:45Z | nodejs-orm | 3 | `--max-old-space-size=256` | tuned |
 | [`20260811_0956__nodejs-orm__node128m_3it.json`](20260811_0956__nodejs-orm__node128m_3it.json) | 2026-08-11T09:56:40Z | nodejs-orm | 3 | `--max-old-space-size=128` | tuned |
 | [`20260811_1031__10runtimes__Xmx128m-ParallelGC_node512m_3it.json`](20260811_1031__10runtimes__Xmx128m-ParallelGC_node512m_3it.json) | 2026-08-11T10:31:06Z | go-orm, go-sql, nodejs-orm, nodejs-sql, quarkus3-native, quarkus3-virtual, rust-orm, rust-sql, spring4-native, spring4-virtual | 3 | `-Xmx128m` `-XX:+UseParallelGC` `--max-old-space-size=512` | tuned |
+| [`20260812_0621__quarkus3-virtual__Xmx512m-ShenandoahGC_3it.json`](20260812_0621__quarkus3-virtual__Xmx512m-ShenandoahGC_3it.json) | 2026-08-12T06:21:25Z | quarkus3-virtual | 3 | `-Xmx512m` ` -XX:+UseShenandoahGC` | tuned |
+| [`20260812_0639__quarkus3-native+quarkus3-virtual__Xmx48m-ParallelGC_3it.json`](20260812_0639__quarkus3-native+quarkus3-virtual__Xmx48m-ParallelGC_3it.json) | 2026-08-12T06:39:30Z | quarkus3-native, quarkus3-virtual | 3 | `-Xmx48m` `-XX:+UseParallelGC` | tuned |
+| [`20260812_0723__quarkus3-native+quarkus3-virtual__Xmx64m-ParallelGC_3it.json`](20260812_0723__quarkus3-native+quarkus3-virtual__Xmx64m-ParallelGC_3it.json) | 2026-08-12T07:23:20Z | quarkus3-native, quarkus3-virtual | 3 | `-Xmx64m` `-XX:+UseParallelGC` | tuned |
 <!-- runs -->
 
 ## Résultats
@@ -249,6 +252,11 @@ Une ligne par runtime, moyennée sur les itérations du run.
 | `20260811_1031` | rust-sql | 1 | - | 389.7 | 24 | 8.1 | 13.2 | 4 127 | 321.11 |
 | `20260811_1031` | spring4-native | 1 | 128m | 946.6 | 1 047 | 238.6 | 251.0 | 769 | 3.18 |
 | `20260811_1031` | spring4-virtual | 1 | 128m | 10.5 | 18 374 | 336.0 | 430.1 | 2 793 | 6.81 |
+| `20260812_0621` | quarkus3-virtual | 2 | 512m | 12.2 | - | - | 796.3 | 5 629 | 7.24 |
+| `20260812_0639` | quarkus3-native | 2 | 48m | 323.0 | - | - | 134.7 | 2 060 | 16.59 |
+| `20260812_0639` | quarkus3-virtual | 2 | 48m | 12.5 | - | - | 285.7 | 5 638 | 19.93 |
+| `20260812_0723` | quarkus3-native | 2 | 64m | 320.3 | - | - | 136.0 | 2 363 | 19.68 |
+| `20260812_0723` | quarkus3-virtual | 2 | 64m | 13.0 | - | - | 302.7 | 6 215 | 21.37 |
 <!-- results -->
 
 ### Origine des colonnes
