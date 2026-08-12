@@ -176,6 +176,23 @@ Each runtime appears only once, at its best rung — and **it's not the same run
 the measure**: raw throughput peaks at `-Xmx` 512 or 384 MiB, density at 128 MiB. The
 ranking partially flips as a result, with Rust first on density and fifth on throughput.
 
+Average build time per runtime, across every archived 2-core run regardless of `-Xmx`
+(build time doesn't depend on the heap ceiling, so splitting by rung would only
+fragment the same measurement). 1-core runs are excluded — a build pinned to one core
+takes measurably longer, as seen in the 1-core section below.
+
+<!-- build-times:start -->
+| Runtime | Runs averaged | Avg build (s) |
+|---|---|---|
+| spring4-virtual | 5 | 5.8 |
+| nodejs-orm | 4 | 6.0 |
+| quarkus3-virtual | 7 | 12.7 |
+| go-orm | 1 | 43.7 |
+| rust-orm | 1 | 254.5 |
+| quarkus3-native | 7 | 316.8 |
+| spring4-native | 5 | 525.2 |
+<!-- build-times:end -->
+
 ### 1 core
 
 A single run, from 2026-08-11: all ten runtimes at `-Xmx128m`, Node at
@@ -213,6 +230,7 @@ PostgreSQL.
 | [`20260812_0811__spring4-native+spring4-virtual__Xmx96m-ParallelGC_3it.json`](20260812_0811__spring4-native+spring4-virtual__Xmx96m-ParallelGC_3it.json) | 2026-08-12T08:11:25Z | spring4-native, spring4-virtual | 3 | `-Xmx96m` `-XX:+UseParallelGC` | tuned |
 | [`20260812_0906__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx96m-ParallelGC_3it.json`](20260812_0906__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx96m-ParallelGC_3it.json) | 2026-08-12T09:06:55Z | quarkus3-native, quarkus3-virtual, spring4-native, spring4-virtual | 3 | `-Xmx96m` `-XX:+UseParallelGC` | tuned |
 | [`20260812_1136__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx64m-ParallelGC_3it.json`](20260812_1136__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx64m-ParallelGC_3it.json) | 2026-08-12T11:36:08Z | quarkus3-native, quarkus3-virtual, spring4-native, spring4-virtual | 3 | `-Xmx64m` `-XX:+UseParallelGC` | tuned |
+| [`20260812_1513__quarkus3-native+quarkus3-virtual+spring4-native__Xmx48m-ParallelGC_3it.json`](20260812_1513__quarkus3-native+quarkus3-virtual+spring4-native__Xmx48m-ParallelGC_3it.json) | 2026-08-12T15:13:04Z | quarkus3-native, quarkus3-virtual, spring4-native | 3 | `-Xmx48m` `-XX:+UseParallelGC` | tuned |
 <!-- runs -->
 
 ## Results
@@ -269,6 +287,9 @@ One row per runtime, averaged over the run's iterations.
 | `20260812_1136` | quarkus3-virtual | 1 | 64m | 22.2 | - | - | 298.2 | 3 666 | 12.36 |
 | `20260812_1136` | spring4-native | 1 | 64m | 950.6 | - | - | 227.9 | 683 | 3.10 |
 | `20260812_1136` | spring4-virtual | 1 | 64m | 11.6 | - | - | 347.2 | 704 | 2.16 |
+| `20260812_1513` | quarkus3-native | 1 | 48m | 619.1 | - | - | 134.2 | 1 486 | 11.08 |
+| `20260812_1513` | quarkus3-virtual | 1 | 48m | 22.8 | - | - | 282.2 | 3 475 | 12.35 |
+| `20260812_1513` | spring4-native | 1 | 48m | 1028.6 | - | - | 215.2 | 184 | 0.87 |
 <!-- results -->
 
 ### Column provenance
