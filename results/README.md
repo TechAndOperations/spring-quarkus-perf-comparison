@@ -184,13 +184,13 @@ takes measurably longer, as seen in the 1-core section below.
 <!-- build-times:start -->
 | Runtime | Runs averaged | Avg build (s) |
 |---|---|---|
-| spring4-virtual | 5 | 5.8 |
+| spring4-virtual | 6 | 5.8 |
 | nodejs-orm | 4 | 6.0 |
-| quarkus3-virtual | 7 | 12.7 |
+| quarkus3-virtual | 8 | 12.6 |
 | go-orm | 1 | 43.7 |
 | rust-orm | 1 | 254.5 |
-| quarkus3-native | 7 | 316.8 |
-| spring4-native | 5 | 525.2 |
+| quarkus3-native | 8 | 316.1 |
+| spring4-native | 6 | 522.1 |
 <!-- build-times:end -->
 
 ### 1 core
@@ -231,6 +231,7 @@ PostgreSQL.
 | [`20260812_0906__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx96m-ParallelGC_3it.json`](20260812_0906__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx96m-ParallelGC_3it.json) | 2026-08-12T09:06:55Z | quarkus3-native, quarkus3-virtual, spring4-native, spring4-virtual | 3 | `-Xmx96m` `-XX:+UseParallelGC` | tuned |
 | [`20260812_1136__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx64m-ParallelGC_3it.json`](20260812_1136__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx64m-ParallelGC_3it.json) | 2026-08-12T11:36:08Z | quarkus3-native, quarkus3-virtual, spring4-native, spring4-virtual | 3 | `-Xmx64m` `-XX:+UseParallelGC` | tuned |
 | [`20260812_1513__quarkus3-native+quarkus3-virtual+spring4-native__Xmx48m-ParallelGC_3it.json`](20260812_1513__quarkus3-native+quarkus3-virtual+spring4-native__Xmx48m-ParallelGC_3it.json) | 2026-08-12T15:13:04Z | quarkus3-native, quarkus3-virtual, spring4-native | 3 | `-Xmx48m` `-XX:+UseParallelGC` | tuned |
+| [`20260812_1732__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx96m-ParallelGC_3it.json`](20260812_1732__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx96m-ParallelGC_3it.json) | 2026-08-12T17:32:52Z | quarkus3-native, quarkus3-virtual, spring4-native, spring4-virtual | 3 | `-Xmx96m` `-XX:+UseParallelGC` | tuned |
 <!-- runs -->
 
 ## Results
@@ -290,6 +291,10 @@ One row per runtime, averaged over the run's iterations.
 | `20260812_1513` | quarkus3-native | 1 | 48m | 619.1 | - | - | 134.2 | 1 486 | 11.08 |
 | `20260812_1513` | quarkus3-virtual | 1 | 48m | 22.8 | - | - | 282.2 | 3 475 | 12.35 |
 | `20260812_1513` | spring4-native | 1 | 48m | 1028.6 | - | - | 215.2 | 184 | 0.87 |
+| `20260812_1732` | quarkus3-native | 2 | 96m | 311.2 | - | - | 155.4 | 3 418 | 22.86 |
+| `20260812_1732` | quarkus3-virtual | 2 | 96m | 12.5 | - | - | 338.8 | 6 417 | 19.43 |
+| `20260812_1732` | spring4-native | 2 | 96m | 506.6 | - | - | 241.2 | 1 402 | 5.98 |
+| `20260812_1732` | spring4-virtual | 2 | 96m | 5.9 | - | - | 400.7 | 4 575 | 12.10 |
 <!-- results -->
 
 ### Column provenance
