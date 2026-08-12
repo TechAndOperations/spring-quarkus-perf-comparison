@@ -213,6 +213,7 @@ traitement applicatif et attente de PostgreSQL.
 | [`20260812_0723__quarkus3-native+quarkus3-virtual__Xmx64m-ParallelGC_3it.json`](20260812_0723__quarkus3-native+quarkus3-virtual__Xmx64m-ParallelGC_3it.json) | 2026-08-12T07:23:20Z | quarkus3-native, quarkus3-virtual | 3 | `-Xmx64m` `-XX:+UseParallelGC` | tuned |
 | [`20260812_0811__spring4-native+spring4-virtual__Xmx96m-ParallelGC_3it.json`](20260812_0811__spring4-native+spring4-virtual__Xmx96m-ParallelGC_3it.json) | 2026-08-12T08:11:25Z | spring4-native, spring4-virtual | 3 | `-Xmx96m` `-XX:+UseParallelGC` | tuned |
 | [`20260812_0906__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx96m-ParallelGC_3it.json`](20260812_0906__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx96m-ParallelGC_3it.json) | 2026-08-12T09:06:55Z | quarkus3-native, quarkus3-virtual, spring4-native, spring4-virtual | 3 | `-Xmx96m` `-XX:+UseParallelGC` | tuned |
+| [`20260812_1136__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx64m-ParallelGC_3it.json`](20260812_1136__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx64m-ParallelGC_3it.json) | 2026-08-12T11:36:08Z | quarkus3-native, quarkus3-virtual, spring4-native, spring4-virtual | 3 | `-Xmx64m` `-XX:+UseParallelGC` | tuned |
 <!-- runs -->
 
 ## Résultats
@@ -265,6 +266,10 @@ Une ligne par runtime, moyennée sur les itérations du run.
 | `20260812_0906` | quarkus3-virtual | 1 | 96m | 24.1 | - | - | 328.0 | 3 857 | 12.06 |
 | `20260812_0906` | spring4-native | 1 | 96m | 956.8 | - | - | 241.8 | 787 | 3.29 |
 | `20260812_0906` | spring4-virtual | 1 | 96m | 11.3 | - | - | 388.6 | 2 665 | 6.94 |
+| `20260812_1136` | quarkus3-native | 1 | 64m | 599.4 | - | - | 145.1 | 1 636 | 11.65 |
+| `20260812_1136` | quarkus3-virtual | 1 | 64m | 22.2 | - | - | 298.2 | 3 666 | 12.36 |
+| `20260812_1136` | spring4-native | 1 | 64m | 950.6 | - | - | 227.9 | 683 | 3.10 |
+| `20260812_1136` | spring4-virtual | 1 | 64m | 11.6 | - | - | 347.2 | 704 | 2.16 |
 <!-- results -->
 
 ### Origine des colonnes
