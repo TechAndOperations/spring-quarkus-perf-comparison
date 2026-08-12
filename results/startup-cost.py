@@ -75,17 +75,17 @@ def build(cores):
 
     o.append(
         f'<text x="{M["l"]}" y="30" fill="{ink}" font-size="17" font-weight="600">'
-        f"Coût de démarrage : délai et mémoire avant la première réponse</text>"
+        f"Startup cost: delay and memory before the first response</text>"
     )
     o.append(
         f'<text x="{M["l"]}" y="50" fill="{ink2}" font-size="12.5">'
-        f"Un point par runtime, run de TTFR médian · {cores_label(cores)} · "
-        f"en bas à gauche, le moins coûteux</text>"
+        f"One point per runtime, median-TTFR run · {cores_label(cores)} · "
+        f"bottom-left is cheapest</text>"
     )
     o.append(
         f'<text x="{M["l"]}" y="67" fill="{ink2}" font-size="11.5">'
-        f"Deux axes logarithmiques : le TTFR varie d’un facteur 312 entre Rust et "
-        f"Spring sur JVM, le RSS d’un facteur 54</text>"
+        f"Both axes logarithmic: TTFR varies by a factor of 312 between Rust and "
+        f"Spring on the JVM, RSS by a factor of 54</text>"
     )
 
     for t in yt:
@@ -111,11 +111,11 @@ def build(cores):
 
     o.append(
         f'<text x="{M["l"] + PW / 2:.0f}" y="{H - 14}" fill="{ink2}" font-size="12" '
-        f'text-anchor="middle">Temps jusqu’à la première réponse (ms, échelle log)</text>'
+        f'text-anchor="middle">Time to first response (ms, log scale)</text>'
     )
     o.append(
         f'<text transform="translate(20,{M["t"] + PH / 2:.0f}) rotate(-90)" fill="{ink2}" '
-        f'font-size="12" text-anchor="middle">RSS après la 1ʳᵉ requête (MiB, échelle log)</text>'
+        f'font-size="12" text-anchor="middle">RSS after the 1st request (MiB, log scale)</text>'
     )
 
     for rt, xmx, ttfr, rss, _c in sorted(rows, key=lambda r: r[2]):
@@ -144,12 +144,12 @@ def build(cores):
         )
 
     lx, ly = M["l"] + PW + 26, M["t"] + 6
-    o.append(f'<text x="{lx}" y="{ly}" fill="{ink}" font-size="11.5" font-weight="600">Famille</text>')
+    o.append(f'<text x="{lx}" y="{ly}" fill="{ink}" font-size="11.5" font-weight="600">Family</text>')
     for i, fam in enumerate(FAMILY_LABEL):
         y = ly + 22 + i * 21
         o.append(marker("circle", lx + 7, y - 4, f"var(--{fam})", surface))
         o.append(f'<text x="{lx + 20}" y="{y}" fill="{ink2}" font-size="11.5">{FAMILY_LABEL[fam]}</text>')
-    o.append(f'<text x="{lx}" y="{ly + 103}" fill="{ink}" font-size="11.5" font-weight="600">Exécution</text>')
+    o.append(f'<text x="{lx}" y="{ly + 103}" fill="{ink}" font-size="11.5" font-weight="600">Execution</text>')
     for i, shape in enumerate(SHAPE_LABEL):
         y = ly + 125 + i * 21
         o.append(marker(shape, lx + 7, y - 4, ink2, surface))
@@ -161,4 +161,4 @@ def build(cores):
 for _cores in core_counts():
     out = Path(f"{STEM}-{_cores}c.svg")
     out.write_text(build(_cores))
-    print(f"écrit: {out}")
+    print(f"wrote: {out}")

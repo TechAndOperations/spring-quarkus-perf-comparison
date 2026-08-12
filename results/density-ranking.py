@@ -42,17 +42,17 @@ def build(cores):
 
     o.append(
         f'<text x="{M["l"]}" y="30" fill="{ink}" font-size="17" font-weight="600">'
-        f"Densité de débit, meilleure configuration de chaque runtime</text>"
+        f"Throughput density, each runtime's best configuration</text>"
     )
     o.append(
         f'<text x="{M["l"]}" y="50" fill="{ink2}" font-size="12.5">'
-        f"Requêtes par seconde et par MiB de RSS sous charge · 3 itérations par run · "
-        f"{cores_label(cores)} · ordonnée logarithmique</text>"
+        f"Requests per second per MiB of RSS under load · 3 iterations per run · "
+        f"{cores_label(cores)} · logarithmic y-axis</text>"
     )
     o.append(
         f'<text x="{M["l"]}" y="67" fill="{ink2}" font-size="11.5">'
-        f"Rust et Go n’exportent pas les mêmes signaux OpenTelemetry que les modules "
-        f"Java : une part de leur avance mesure ce qu’ils n’instrumentent pas</text>"
+        f"Rust and Go do not export the same OpenTelemetry signals as the Java "
+        f"modules: part of their lead measures what they do not instrument</text>"
     )
 
     for t in yt:
@@ -109,7 +109,7 @@ def build(cores):
 
     o.append(
         f'<text transform="translate(18,{M["t"] + PH / 2:.0f}) rotate(-90)" fill="{ink2}" '
-        f'font-size="12" text-anchor="middle">Densité (req/s par MiB, échelle log)</text>'
+        f'font-size="12" text-anchor="middle">Density (req/s per MiB, log scale)</text>'
     )
 
     for i, fam in enumerate(FAMILY_LABEL):
@@ -127,4 +127,4 @@ def build(cores):
 for _cores in core_counts():
     out = Path(f"{STEM}-{_cores}c.svg")
     out.write_text(build(_cores))
-    print(f"écrit: {out}")
+    print(f"wrote: {out}")
