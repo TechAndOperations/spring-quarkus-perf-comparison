@@ -37,17 +37,17 @@ def build(cores):
 
     o.append(
         f'<text x="{M["l"]}" y="30" fill="{ink}" font-size="17" font-weight="600">'
-        f"Débit maximal atteint par chaque runtime</text>"
+        f"Peak throughput reached by each runtime</text>"
     )
     o.append(
         f'<text x="{M["l"]}" y="50" fill="{ink2}" font-size="12.5">'
-        f"Meilleure configuration mesurée de chaque runtime · 3 itérations par run · "
-        f"{cores_label(cores)} dédié{'' if cores == '1' else 's'} à l'application</text>"
+        f"Each runtime's best measured configuration · 3 iterations per run · "
+        f"{cores_label(cores)} dedicated to the application</text>"
     )
     o.append(
         f'<text x="{M["l"]}" y="67" fill="{ink2}" font-size="11.5">'
-        f"Le palier qui maximise le débit n’est pas celui qui maximise la densité : "
-        f"la vitesse brute veut un tas généreux, l’efficacité un tas serré</text>"
+        f"The rung that maximises throughput is not the one that maximises density: "
+        f"raw speed wants a generous heap, efficiency a tight one</text>"
     )
 
     for t in yt:
@@ -98,7 +98,7 @@ def build(cores):
 
     o.append(
         f'<text transform="translate(18,{M["t"] + PH / 2:.0f}) rotate(-90)" fill="{ink2}" '
-        f'font-size="12" text-anchor="middle">Débit (req/s)</text>'
+        f'font-size="12" text-anchor="middle">Throughput (req/s)</text>'
     )
 
     for i, fam in enumerate(FAMILY_LABEL):
@@ -112,4 +112,4 @@ def build(cores):
 for _cores in core_counts():
     out = Path(f"{STEM}-{_cores}c.svg")
     out.write_text(build(_cores))
-    print(f"écrit: {out}")
+    print(f"wrote: {out}")

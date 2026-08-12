@@ -79,7 +79,7 @@ def config_label(runtimes, config):
         bits += [f"`{v}`" for v in (jvm.get("memory"), jvm.get("args")) if v]
     if any(rt.startswith("nodejs") for rt in runtimes) and node.get("args"):
         bits.append(f"`{node['args']}`")
-    return " ".join(bits) or "sans plafond"
+    return " ".join(bits) or "no ceiling"
 
 
 def app_cores(resources):

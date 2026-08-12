@@ -19,7 +19,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 
 FAMILY_LABEL = {"quarkus": "Quarkus 3", "spring": "Spring Boot 4", "other": "Go · Rust · Node"}
-SHAPE_LABEL = {"square": "Binaire natif", "circle": "Machine virtuelle"}
+SHAPE_LABEL = {"square": "Native binary", "circle": "Virtual machine"}
 
 # runtime -> (family slot, shape)
 KIND = {
@@ -64,14 +64,14 @@ def cores_of(data):
 
 
 def cores_label(cores):
-    return f"{cores} cœur" + ("" if cores == "1" else "s")
+    return f"{cores} core" + ("" if cores == "1" else "s")
 
 
 def heap_note(xmx):
     """What distinguishes two points of the same runtime *within* one chart. The core
     count is not in here: each chart covers a single core count and says so in its
     subtitle, because runs across core counts are not comparable at all."""
-    return f"-Xmx {xmx}m" if xmx else "sans plafond"
+    return f"-Xmx {xmx}m" if xmx else "no ceiling"
 
 
 def core_counts():
