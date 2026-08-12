@@ -211,6 +211,7 @@ traitement applicatif et attente de PostgreSQL.
 | [`20260812_0621__quarkus3-virtual__Xmx512m-ShenandoahGC_3it.json`](20260812_0621__quarkus3-virtual__Xmx512m-ShenandoahGC_3it.json) | 2026-08-12T06:21:25Z | quarkus3-virtual | 3 | `-Xmx512m` ` -XX:+UseShenandoahGC` | tuned |
 | [`20260812_0639__quarkus3-native+quarkus3-virtual__Xmx48m-ParallelGC_3it.json`](20260812_0639__quarkus3-native+quarkus3-virtual__Xmx48m-ParallelGC_3it.json) | 2026-08-12T06:39:30Z | quarkus3-native, quarkus3-virtual | 3 | `-Xmx48m` `-XX:+UseParallelGC` | tuned |
 | [`20260812_0723__quarkus3-native+quarkus3-virtual__Xmx64m-ParallelGC_3it.json`](20260812_0723__quarkus3-native+quarkus3-virtual__Xmx64m-ParallelGC_3it.json) | 2026-08-12T07:23:20Z | quarkus3-native, quarkus3-virtual | 3 | `-Xmx64m` `-XX:+UseParallelGC` | tuned |
+| [`20260812_0811__spring4-native+spring4-virtual__Xmx96m-ParallelGC_3it.json`](20260812_0811__spring4-native+spring4-virtual__Xmx96m-ParallelGC_3it.json) | 2026-08-12T08:11:25Z | spring4-native, spring4-virtual | 3 | `-Xmx96m` `-XX:+UseParallelGC` | tuned |
 <!-- runs -->
 
 ## Résultats
@@ -257,6 +258,8 @@ Une ligne par runtime, moyennée sur les itérations du run.
 | `20260812_0639` | quarkus3-virtual | 2 | 48m | 12.5 | - | - | 285.7 | 5 638 | 19.93 |
 | `20260812_0723` | quarkus3-native | 2 | 64m | 320.3 | - | - | 136.0 | 2 363 | 19.68 |
 | `20260812_0723` | quarkus3-virtual | 2 | 64m | 13.0 | - | - | 302.7 | 6 215 | 21.37 |
+| `20260812_0811` | spring4-native | 2 | 96m | 531.5 | - | - | 242.4 | 1 413 | 5.97 |
+| `20260812_0811` | spring4-virtual | 2 | 96m | 6.1 | - | - | 394.8 | 4 521 | 12.00 |
 <!-- results -->
 
 ### Origine des colonnes
