@@ -1,31 +1,28 @@
 use opentelemetry::trace::TracerProvider as _;
-use opentelemetry::KeyValue;
 use opentelemetry_appender_tracing::layer::OpenTelemetryTracingBridge;
-use opentelemetry_sdk::logs::LoggerProvider;
-use opentelemetry_sdk::runtime::Tokio;
-use opentelemetry_sdk::trace::{Sampler, TracerProvider};
+use opentelemetry_sdk::logs::SdkLoggerProvider;
+use opentelemetry_sdk::metrics::SdkMeterProvider;
+use opentelemetry_sdk::trace::{Sampler, SdkTracerProvider};
 use opentelemetry_sdk::Resource;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::Layer;
 
-/// Traces and logs, held together so main.rs can flush both on SIGTERM (the benchmark pipeline
-/// stops the app with `kill -15`); dropping a provider without an explicit shutdown can lose its
-/// final batch.
-///
-/// No metrics: `opentelemetry-instrumentation-tokio` has no release compatible with the 0.27 line
-/// this module is pinned to, and hand-rolled instruments would not match what Micrometer publishes
-/// automatically in the Quarkus modules. Tracked in rust/README.md.
+/// Traces, logs and metrics, held together so main.rs can flush all three on SIGTERM (the
+/// benchmark pipeline stops the app with `kill -15`); dropping a provider without an explicit
+/// shutdown can lose its final batch.
 pub struct Telemetry {
-    tracer_provider: TracerProvider,
-    logger_provider: LoggerProvider,
+    tracer_provider: SdkTracerProvider,
+    logger_provider: SdkLoggerProvider,
+    meter_provider: SdkMeterProvider,
 }
 
 impl Telemetry {
     pub fn shutdown(&self) {
         let _ = self.tracer_provider.shutdown();
         let _ = self.logger_provider.shutdown();
+        let _ = self.meter_provider.shutdown();
     }
 }
 
@@ -51,17 +48,17 @@ pub fn init() -> Option<Telemetry> {
         .unwrap_or(0.1);
 
     let service_name = std::env::var("OTEL_SERVICE_NAME").unwrap_or_else(|_| "rust".to_string());
-    let resource = Resource::new(vec![KeyValue::new("service.name", service_name)]);
+    let resource = Resource::builder().with_service_name(service_name).build();
 
     let span_exporter = opentelemetry_otlp::SpanExporter::builder()
         .with_tonic()
         .build()
         .expect("failed to build OTLP span exporter");
 
-    let tracer_provider = TracerProvider::builder()
+    let tracer_provider = SdkTracerProvider::builder()
         .with_sampler(Sampler::TraceIdRatioBased(sampler_arg))
         .with_resource(resource.clone())
-        .with_batch_exporter(span_exporter, Tokio)
+        .with_batch_exporter(span_exporter)
         .build();
 
     let log_exporter = opentelemetry_otlp::LogExporter::builder()
@@ -69,10 +66,30 @@ pub fn init() -> Option<Telemetry> {
         .build()
         .expect("failed to build OTLP log exporter");
 
-    let logger_provider = LoggerProvider::builder()
-        .with_resource(resource)
-        .with_batch_exporter(log_exporter, Tokio)
+    let logger_provider = SdkLoggerProvider::builder()
+        .with_resource(resource.clone())
+        .with_batch_exporter(log_exporter)
         .build();
+
+    // Periodic export, not a batch processor: metrics are pulled on a timer
+    // (OTEL_METRIC_EXPORT_INTERVAL, default 60s) rather than pushed per-event like spans and
+    // logs, since Tokio's runtime gauges (worker count, queue depth) are cheap to sample and
+    // don't need per-change delivery.
+    let metric_exporter = opentelemetry_otlp::MetricExporter::builder()
+        .with_tonic()
+        .build()
+        .expect("failed to build OTLP metric exporter");
+
+    let meter_provider = SdkMeterProvider::builder()
+        .with_resource(resource)
+        .with_periodic_exporter(metric_exporter)
+        .build();
+
+    opentelemetry::global::set_meter_provider(meter_provider.clone());
+    // Registers the observable instruments against the current Tokio runtime - must run inside
+    // it, which init() does since main.rs calls it from within #[tokio::main]. See
+    // rust/README.md for the metric names this exposes.
+    opentelemetry_instrumentation_tokio::observe_current_runtime();
 
     let tracer = tracer_provider.tracer("rust");
 
@@ -91,5 +108,5 @@ pub fn init() -> Option<Telemetry> {
         .with(OpenTelemetryTracingBridge::new(&logger_provider).with_filter(EnvFilter::new("info")))
         .init();
 
-    Some(Telemetry { tracer_provider, logger_provider })
+    Some(Telemetry { tracer_provider, logger_provider, meter_provider })
 }
