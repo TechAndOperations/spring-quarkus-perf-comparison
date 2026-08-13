@@ -175,13 +175,13 @@ takes measurably longer, as seen in the 1-core section below.
 <!-- build-times:start -->
 | Runtime | Runs averaged | Avg build (s) |
 |---|---|---|
-| spring4-virtual | 6 | 5.8 |
+| spring4-virtual | 8 | 5.9 |
 | nodejs-orm | 4 | 6.0 |
-| quarkus3-virtual | 8 | 12.6 |
+| quarkus3-virtual | 10 | 12.6 |
 | go-orm | 1 | 43.7 |
-| rust-orm | 1 | 254.5 |
-| quarkus3-native | 8 | 316.1 |
-| spring4-native | 6 | 522.1 |
+| rust-orm | 1 | 188.3 |
+| quarkus3-native | 10 | 314.4 |
+| spring4-native | 8 | 519.7 |
 <!-- build-times:end -->
 
 ### 1 core
@@ -201,7 +201,7 @@ takes measurably longer, as seen in the 1-core section below.
 | [`20260810_1925__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx256m-ParallelGC_3it.json`](20260810_1925__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx256m-ParallelGC_3it.json) | 2026-08-10T19:25:33Z | quarkus3-native, quarkus3-virtual, spring4-native, spring4-virtual | 3 | `-Xmx256m` `-XX:+UseParallelGC` | tuned |
 | [`20260811_0338__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx128m-ParallelGC_3it.json`](20260811_0338__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx128m-ParallelGC_3it.json) | 2026-08-11T03:38:27Z | quarkus3-native, quarkus3-virtual, spring4-native, spring4-virtual | 3 | `-Xmx128m` `-XX:+UseParallelGC` | tuned |
 | [`20260811_0548__quarkus3-native__Xmx64m-ParallelGC_3it.json`](20260811_0548__quarkus3-native__Xmx64m-ParallelGC_3it.json) | 2026-08-11T05:48:17Z | quarkus3-native | 3 | `-Xmx64m` `-XX:+UseParallelGC` | tuned |
-| [`20260811_0655__go-orm+nodejs-orm+rust-orm__Xms512m-Xmx512m_ParallelGC_3it.json`](20260811_0655__go-orm+nodejs-orm+rust-orm__Xms512m-Xmx512m_ParallelGC_3it.json) | 2026-08-11T06:55:09Z | go-orm, nodejs-orm, rust-orm | 3 | `-Xms512m -Xmx512m` `-XX:+UseParallelGC` | tuned |
+| [`20260811_0655__go-orm+nodejs-orm__Xms512m-Xmx512m_ParallelGC_3it.json`](20260811_0655__go-orm+nodejs-orm__Xms512m-Xmx512m_ParallelGC_3it.json) | 2026-08-11T06:55:09Z | go-orm, nodejs-orm | 3 | `-Xms512m -Xmx512m` `-XX:+UseParallelGC` | tuned |
 | [`20260811_0914__nodejs-orm__node384m_3it.json`](20260811_0914__nodejs-orm__node384m_3it.json) | 2026-08-11T09:14:36Z | nodejs-orm | 3 | `--max-old-space-size=384` | tuned |
 | [`20260811_0935__nodejs-orm__node256m_3it.json`](20260811_0935__nodejs-orm__node256m_3it.json) | 2026-08-11T09:35:45Z | nodejs-orm | 3 | `--max-old-space-size=256` | tuned |
 | [`20260811_0956__nodejs-orm__node128m_3it.json`](20260811_0956__nodejs-orm__node128m_3it.json) | 2026-08-11T09:56:40Z | nodejs-orm | 3 | `--max-old-space-size=128` | tuned |
@@ -216,6 +216,7 @@ takes measurably longer, as seen in the 1-core section below.
 | [`20260812_1732__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx96m-ParallelGC_3it.json`](20260812_1732__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx96m-ParallelGC_3it.json) | 2026-08-12T17:32:52Z | quarkus3-native, quarkus3-virtual, spring4-native, spring4-virtual | 3 | `-Xmx96m` `-XX:+UseParallelGC` | tuned |
 | [`20260812_1921__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx64m-ParallelGC_3it.json`](20260812_1921__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx64m-ParallelGC_3it.json) | 2026-08-12T19:21:25Z | quarkus3-native, quarkus3-virtual, spring4-native, spring4-virtual | 3 | `-Xmx64m` `-XX:+UseParallelGC` | tuned |
 | [`20260813_0240__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx128m-ParallelGC_3it.json`](20260813_0240__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx128m-ParallelGC_3it.json) | 2026-08-13T02:40:30Z | quarkus3-native, quarkus3-virtual, spring4-native, spring4-virtual | 3 | `-Xmx128m` `-XX:+UseParallelGC` | tuned |
+| [`20260813_0515__rust-orm__default_3it.json`](20260813_0515__rust-orm__default_3it.json) | 2026-08-13T05:15:14Z | rust-orm | 3 | no ceiling | tuned |
 <!-- runs -->
 
 ## Results
@@ -243,7 +244,6 @@ One row per runtime, averaged over the run's iterations.
 | `20260811_0548` | quarkus3-native | 2 | 64m | 315.7 | 111 | 99.3 | 142.0 | 2 798 | 20.69 |
 | `20260811_0655` | go-orm | 2 | - | 43.7 | 51 | 28.7 | 51.4 | 3 128 | 62.57 |
 | `20260811_0655` | nodejs-orm | 2 | - | 6.0 | 1 557 | 151.4 | 231.3 | 680 | 3.00 |
-| `20260811_0655` | rust-orm | 2 | - | 254.5 | 29 | 8.2 | 13.6 | 2 455 | 186.62 |
 | `20260811_0914` | nodejs-orm | 2 | 384m | 5.6 | 1 567 | 151.3 | 231.1 | 677 | 3.05 |
 | `20260811_0935` | nodejs-orm | 2 | 256m | 6.3 | 1 747 | 151.4 | 225.8 | 661 | 3.00 |
 | `20260811_0956` | nodejs-orm | 2 | 128m | 5.9 | 1 698 | 151.0 | 226.1 | 700 | 3.11 |
@@ -287,6 +287,7 @@ One row per runtime, averaged over the run's iterations.
 | `20260813_0240` | quarkus3-virtual | 2 | 128m | 12.8 | - | - | 355.0 | 6 413 | 18.57 |
 | `20260813_0240` | spring4-native | 2 | 128m | 513.4 | - | - | 250.6 | 1 466 | 5.93 |
 | `20260813_0240` | spring4-virtual | 2 | 128m | 6.1 | - | - | 435.8 | 5 004 | 11.60 |
+| `20260813_0515` | rust-orm | 2 | - | 188.3 | - | - | 20.7 | 2 322 | 115.35 |
 <!-- results -->
 
 ### Column provenance
