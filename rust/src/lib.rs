@@ -71,5 +71,13 @@ pub fn build_repository(pool: PgPool, mode: &str) -> Arc<dyn FruitRepository> {
 pub fn app(repository: Arc<dyn FruitRepository>) -> axum::Router {
     let service = service::FruitService::new(repository);
 
-    rest::router(service).merge(health::router())
+    // Route/method/status/duration spans around every request, the same depth the other
+    // modules get from their own framework's built-in middleware (Quarkus/Spring's server
+    // filters, NestJS's Express middleware, Go's otelhttp) - the #[instrument] in service.rs
+    // only covers the application layer below this. OtelInResponseLayer must be outermost
+    // (applied last / listed first) so the trace header it adds is not itself traced.
+    rest::router(service)
+        .merge(health::router())
+        .layer(axum_tracing_opentelemetry::middleware::OtelInResponseLayer::default())
+        .layer(axum_tracing_opentelemetry::middleware::OtelAxumLayer::default())
 }

@@ -55,18 +55,28 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 # Observability parity with quarkus3-virtual (quarkus-micrometer-opentelemetry: traces at
-# traceidratio 0.1, OTLP export). These four crates must stay on matching major versions - if
-# `cargo build` fails here on first use, bump all four together rather than one at a time.
-# See src/tracing_setup.rs and rust/README.md ("OpenTelemetry - unverified").
-opentelemetry = "0.27"
-opentelemetry_sdk = { version = "0.27", features = ["rt-tokio", "logs"] }
-opentelemetry-otlp = { version = "0.27", features = ["grpc-tonic", "logs"] }
-tracing-opentelemetry = "0.28"
+# traceidratio 0.1, OTLP export, JVM runtime metrics). These crates must stay on matching major
+# versions - if `cargo build` fails here on first use, bump them all together rather than one at
+# a time. See src/tracing_setup.rs and rust/README.md.
+opentelemetry = "0.32"
+opentelemetry_sdk = { version = "0.32", features = ["rt-tokio", "logs"] }
+opentelemetry-otlp = { version = "0.32", features = ["grpc-tonic", "logs"] }
+tracing-opentelemetry = "0.33"
 # Bridges `tracing` events to OTel log records, the analogue of the Go module's otelslog bridge.
-# Pinned to 0.27 to match the four crates above: the HTTP/SQL/runtime instrumentation crates have
-# no 0.27 release at all, so this is the only automatic instrumentation available without a
-# migration to 0.32 - see rust/README.md.
-opentelemetry-appender-tracing = "0.27"
+opentelemetry-appender-tracing = "0.32"
+# Tokio runtime metrics (worker count, queue depth, busy time) - the analogue of the JVM
+# runtime metrics Micrometer publishes automatically for the Quarkus modules. Needs opentelemetry
+# 0.32+, which is why this was unavailable at the 0.27 pin above.
+opentelemetry-instrumentation-tokio = "0.2"
+# HTTP middleware spans (route, method, status, duration) around every request, the same depth
+# Quarkus/Spring/NestJS/Go already get from their own frameworks - the current #[instrument] on
+# service.rs only covers the application layer, not the HTTP boundary. Also needs 0.32+.
+#
+# "tracing_level_info": without it, the span this crate creates is emitted at TRACE, not INFO -
+# tracing_setup.rs's EnvFilter::new("info") on the OTel layer then drops it silently, and only the
+# inner #[instrument] span makes it to Tempo. Confirmed missing by inspecting a real trace before
+# adding this.
+axum-tracing-opentelemetry = { version = "0.38", features = ["tracing_level_info"] }
 
 [dev-dependencies]
 # default-features off + rustls-tls: avoids linking against system OpenSSL (native-tls), which

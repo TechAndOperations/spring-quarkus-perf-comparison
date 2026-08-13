@@ -59,7 +59,8 @@ queries appear in no trace.
 ### Telemetry
 
 Every module exports OTLP to the Grafana LGTM container's collector, but neither the same
-signals nor the same depth. Measured on 2026-08-10 by querying Tempo, Prometheus and Loki.
+signals nor the same depth. Measured on 2026-08-10 by querying Tempo, Prometheus and Loki;
+`rust`'s row was re-measured on 2026-08-13 after bumping its OTel crates from 0.27 to 0.32.
 
 | Stack | Traces | Spans / request | Metrics | Logs |
 |---|---|---|---|---|
@@ -67,16 +68,20 @@ signals nor the same depth. Measured on 2026-08-10 by querying Tempo, Prometheus
 | `quarkus3-virtual` | ✅ | 4 (5 cold) | ✅ 132 series | ✅ |
 | `nodejs` | ✅ | **10** | ✅ 109 series | ✅ |
 | `go` | ✅ | 5 | ✅ 71 series | ✅ |
-| `rust` | ✅ | **1** | ❌ **none** | ✅ |
+| `rust` | ✅ | 2 | ✅ 28 series | ✅ |
 
-The depth gap is significant: Node auto-instruments every Express middleware on top of
-NestJS and the `pg` driver, whereas Rust produces only a single application span — no HTTP
-middleware, no SQL query. **The cost of observability is therefore not comparable across
-stacks**, and it favours Rust in the throughput measurements.
+The depth gap is still significant, just narrower than before: Node auto-instruments every
+Express middleware on top of NestJS and the `pg` driver, where Rust's two spans are an HTTP
+middleware span (`axum-tracing-opentelemetry`) wrapping the application span — still no SQL
+query span, unlike Node, Quarkus and Spring. Rust's 28 metric series are Tokio runtime
+gauges (worker count, queue depth, busy time) from `opentelemetry-instrumentation-tokio`, not
+request- or database-level metrics like the other stacks' 71-135 — a difference in *kind*,
+not just count. **The cost of observability is therefore still not comparable across
+stacks**, and it still favours Rust in the throughput measurements, only by less than before.
 
-Rust remains without metrics because the instrumentation crates it would need
-(`opentelemetry-instrumentation-tokio`, `axum-tracing-opentelemetry`, `sqlx-otel`) have no
-version compatible with the `opentelemetry` 0.27 the module is pinned to.
+Getting Rust's SQL query onto a span, and its metrics up to request/connection-pool depth,
+needs `sqlx-otel`, which requires `sqlx` 0.9 - a `sea-orm` 1→2 migration the module hasn't
+made yet.
 
 ### ORM sophistication versus Hibernate
 
