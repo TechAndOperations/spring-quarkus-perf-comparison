@@ -105,7 +105,9 @@ impl FruitRepository for OrmFruitRepository {
     async fn persist(&self, req: CreateFruitRequest) -> anyhow::Result<FruitDto> {
         let row = self
             .db
-            .query_one(Statement::from_string(DatabaseBackend::Postgres, "SELECT nextval('fruits_seq') AS id"))
+            // query_one() now wants a StatementBuilder (sea-query's typed builders); a raw SQL
+            // string still goes through query_one_raw(), which keeps taking an owned Statement.
+            .query_one_raw(Statement::from_string(DatabaseBackend::Postgres, "SELECT nextval('fruits_seq') AS id"))
             .await?
             .ok_or_else(|| anyhow::anyhow!("nextval('fruits_seq') returned no row"))?;
 

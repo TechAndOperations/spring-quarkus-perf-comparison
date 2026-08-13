@@ -52,36 +52,40 @@ Hibernate is the only one with a second-level cache: after warmup, stores are se
 Caffeine and the third query disappears. That's a real and legitimate advantage under load,
 but it has no equivalent in the other three ORMs.
 
-The TypeORM, Hibernate and GORM counts are **measured** — read off real traces in Tempo.
-SeaORM's is **read from the code**: the Rust module has no SQL instrumentation, so its
-queries appear in no trace.
+All four counts are now **measured** — read off real traces in Tempo. SeaORM's became
+measurable on 2026-08-13, after a `sea-orm` 1→2 migration enabled its native
+`tracing-spans` feature; before that its queries appeared in no trace and the count was
+read from the code instead.
 
 ### Telemetry
 
 Every module exports OTLP to the Grafana LGTM container's collector, but neither the same
 signals nor the same depth. Measured on 2026-08-10 by querying Tempo, Prometheus and Loki;
-`rust`'s row was re-measured on 2026-08-13 after bumping its OTel crates from 0.27 to 0.32.
+`rust`'s row was re-measured on 2026-08-13 after bumping its OTel crates from 0.27 to 0.32
+and migrating `sea-orm` from 1 to 2.
 
 | Stack | Traces | Spans / request | Metrics | Logs |
 |---|---|---|---|---|
 | `springboot4` | ✅ | 5 | ✅ 135 series | ✅ |
 | `quarkus3-virtual` | ✅ | 4 (5 cold) | ✅ 132 series | ✅ |
 | `nodejs` | ✅ | **10** | ✅ 109 series | ✅ |
+| `rust` | ✅ | 4 | ✅ 28 series | ✅ |
 | `go` | ✅ | 5 | ✅ 71 series | ✅ |
-| `rust` | ✅ | 2 | ✅ 28 series | ✅ |
 
-The depth gap is still significant, just narrower than before: Node auto-instruments every
-Express middleware on top of NestJS and the `pg` driver, where Rust's two spans are an HTTP
-middleware span (`axum-tracing-opentelemetry`) wrapping the application span — still no SQL
-query span, unlike Node, Quarkus and Spring. Rust's 28 metric series are Tokio runtime
-gauges (worker count, queue depth, busy time) from `opentelemetry-instrumentation-tokio`, not
-request- or database-level metrics like the other stacks' 71-135 — a difference in *kind*,
-not just count. **The cost of observability is therefore still not comparable across
-stacks**, and it still favours Rust in the throughput measurements, only by less than before.
+The span gap has narrowed a lot: Rust's four spans are the `axum-tracing-opentelemetry` HTTP
+middleware span, the application span, and one `sea_orm.query_all` per query SeaORM issues
+(two, from `sea-orm`'s own `tracing-spans` feature - no separate instrumentation crate). Go's
+five and Node's ten still cover more ground (per-middleware spans, ORM-internal steps),
+and Rust's metrics remain the shallowest in *kind*, not just count: its 28 series are Tokio
+runtime gauges (worker count, queue depth, busy time) from
+`opentelemetry-instrumentation-tokio`, not request- or database-level metrics like the other
+stacks' 71-135. **The cost of observability is therefore still not fully comparable across
+stacks**, though substantially less lopsided than before this measurement.
 
-Getting Rust's SQL query onto a span, and its metrics up to request/connection-pool depth,
-needs `sqlx-otel`, which requires `sqlx` 0.9 - a `sea-orm` 1→2 migration the module hasn't
-made yet.
+Getting Rust's metrics up to request/connection-pool depth would need `sqlx-otel` on the
+`sql` path specifically (`QUERY_MODE=sql`, not the default `orm` one) - it cannot see the
+`orm` path at all, since `SqlxPostgresConnector::from_sqlx_postgres_pool` takes a plain
+`sqlx::PgPool` and SeaORM never calls `sqlx::Executor` on whatever pool object it's handed.
 
 ### ORM sophistication versus Hibernate
 
