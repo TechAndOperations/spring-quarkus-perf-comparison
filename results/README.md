@@ -118,6 +118,27 @@ finished. Two traces in this archive show it.
 improvement to the protocol on this point: confirming that the C2 phase has actually
 finished before starting to measure, rather than assuming so from a fixed warmup duration.
 
+### Cross-check against the upstream perf lab
+
+The Quarkus perf lab publishes its own [throughput results](https://github.com/quarkusio/benchmarks/blob/main/images/spring-quarkus-perf-comparison/tuned/results-latest-tuned-throughput-for-all-light.svg#gh-light-mode-only)
+for the same four Java runtimes, measured on dedicated hardware with 4 cores pinned to the
+app — twice this archive's 2. Absolute numbers aren't comparable across that core-count
+gap (see the caveat below), but the ratio to `quarkus3-virtual` (= 1) is:
+
+| Runtime | This archive's ratio (2 cores) | Perf lab's ratio (4 cores) |
+|---|---|---|
+| quarkus3-virtual | 1.000 | 1.000 |
+| quarkus3-native | 0.588 | 0.355 |
+| spring4-virtual | 0.789 | 0.652 |
+| spring4-native | 0.237 | 0.141 |
+
+The ranking is identical, but every non-`quarkus3-virtual` runtime sits relatively closer
+to it here than on the perf lab's dedicated hardware. One plausible reading:
+`quarkus3-virtual`'s peak throughput is the most sensitive to a clean, non-virtualised
+environment; the other three, already more constrained elsewhere (native build overhead,
+Spring's own cost), have less headroom to lose and so degrade proportionally less under
+this setup's added variance.
+
 ## Archiving a run
 
 ```sh
@@ -317,6 +338,10 @@ the table but remain in the archived JSON.
   the extra virtualisation layers all add variance this setup cannot isolate. The relative
   comparisons and trends should hold, but absolute numbers would benefit from re-running on
   dedicated performance infrastructure before being treated as conclusive.
+- **The upstream perf lab's reference figures use 4 cores, this archive 2.** Absolute
+  throughput therefore isn't comparable between the two; only the ratio to
+  `quarkus3-virtual` within each dataset is, and even that should be read as a rough signal
+  given the environment caveat above, not a precise measurement.
 
 ## Further reading
 
