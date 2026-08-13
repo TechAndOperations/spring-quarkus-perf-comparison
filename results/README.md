@@ -232,6 +232,7 @@ PostgreSQL.
 | [`20260812_1136__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx64m-ParallelGC_3it.json`](20260812_1136__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx64m-ParallelGC_3it.json) | 2026-08-12T11:36:08Z | quarkus3-native, quarkus3-virtual, spring4-native, spring4-virtual | 3 | `-Xmx64m` `-XX:+UseParallelGC` | tuned |
 | [`20260812_1513__quarkus3-native+quarkus3-virtual+spring4-native__Xmx48m-ParallelGC_3it.json`](20260812_1513__quarkus3-native+quarkus3-virtual+spring4-native__Xmx48m-ParallelGC_3it.json) | 2026-08-12T15:13:04Z | quarkus3-native, quarkus3-virtual, spring4-native | 3 | `-Xmx48m` `-XX:+UseParallelGC` | tuned |
 | [`20260812_1732__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx96m-ParallelGC_3it.json`](20260812_1732__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx96m-ParallelGC_3it.json) | 2026-08-12T17:32:52Z | quarkus3-native, quarkus3-virtual, spring4-native, spring4-virtual | 3 | `-Xmx96m` `-XX:+UseParallelGC` | tuned |
+| [`20260812_1921__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx64m-ParallelGC_3it.json`](20260812_1921__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx64m-ParallelGC_3it.json) | 2026-08-12T19:21:25Z | quarkus3-native, quarkus3-virtual, spring4-native, spring4-virtual | 3 | `-Xmx64m` `-XX:+UseParallelGC` | tuned |
 <!-- runs -->
 
 ## Results
@@ -295,6 +296,10 @@ One row per runtime, averaged over the run's iterations.
 | `20260812_1732` | quarkus3-virtual | 2 | 96m | 12.5 | - | - | 338.8 | 6 417 | 19.43 |
 | `20260812_1732` | spring4-native | 2 | 96m | 506.6 | - | - | 241.2 | 1 402 | 5.98 |
 | `20260812_1732` | spring4-virtual | 2 | 96m | 5.9 | - | - | 400.7 | 4 575 | 12.10 |
+| `20260812_1921` | quarkus3-native | 2 | 64m | 305.3 | - | - | 138.4 | 2 682 | 21.21 |
+| `20260812_1921` | quarkus3-virtual | 2 | 64m | 12.5 | - | - | 307.2 | 6 242 | 20.59 |
+| `20260812_1921` | spring4-native | 2 | 64m | 511.5 | - | - | 227.3 | 1 214 | 5.35 |
+| `20260812_1921` | spring4-virtual | 2 | 64m | 5.8 | - | - | 353.5 | 1 029 | 3.28 |
 <!-- results -->
 
 ### Column provenance
