@@ -22,7 +22,7 @@ tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "signal
 # `buildRequiresTestServices: false` for this runtime.
 # "macros" only enables #[derive(sqlx::FromRow)] here - the compile-time-checked query!/query_as!
 # bang-macros (which would need a live DB at `cargo build` time) are never used in this codebase.
-sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "tls-rustls", "postgres", "macros"] }
+sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "tls-rustls", "postgres", "macros"] }
 
 # The ORM path (QUERY_MODE=orm, the default). Wraps the same sqlx PgPool created for the SQL path
 # (see lib.rs::connect) via SqlxPostgresConnector, so DB_POOL_MAX applies identically to both
@@ -36,7 +36,14 @@ sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio",
 # entity-derived queries, so the entity field is `Decimal` instead, converted to `f64` in
 # repository_orm.rs when building the DTO - the same numeric-to-f64 narrowing, just done in Rust
 # rather than in SQL.
-sea-orm = { version = "1", default-features = false, features = ["sqlx-postgres", "runtime-tokio-rustls", "macros", "with-rust_decimal"] }
+# "tracing-spans": emits a tracing::info_span! around every database operation (sea-orm
+# 2.0.0-rc.29+), the same signal Hibernate/TypeORM/GORM give the other three ORMs via SQL
+# instrumentation - flows through the existing tracing_opentelemetry layer in
+# tracing_setup.rs with no separate wiring. sqlx-otel was considered instead, but
+# SqlxPostgresConnector::from_sqlx_postgres_pool takes a plain sqlx::PgPool - SeaORM never
+# calls sqlx::Executor on whatever pool object it's handed, so wrapping the pool first
+# would not have instrumented anything on this path.
+sea-orm = { version = "2", default-features = false, features = ["sqlx-postgres", "runtime-tokio-rustls", "macros", "with-rust_decimal", "tracing-spans"] }
 # Only for its `ToPrimitive::to_f64()` on the `Decimal` type above, converting the ORM path's
 # `store_fruit_price::Model::price` to the same `f64` DTO shape the raw-SQL path already casts to.
 rust_decimal = "1"

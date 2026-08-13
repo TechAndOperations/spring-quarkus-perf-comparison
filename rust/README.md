@@ -168,8 +168,18 @@ benchmark artifact that is compiled once and measured many times.
   `scripts/dbdata/db.sql`, so both `repository_orm.rs::persist` and `repository_sql.rs::persist`
   fetch the next sequence value explicitly before inserting - same requirement as `go`'s two
   repositories.
-- **OpenTelemetry - version-sensitive, least-verified part of this module.** `src/tracing_setup.rs`
+- **OpenTelemetry - verified against a live collector, version-sensitive.** `src/tracing_setup.rs`
   wires `opentelemetry`/`opentelemetry_sdk`/`opentelemetry-otlp`/`tracing-opentelemetry` for parity
-  with `quarkus3-virtual`'s traces (sampled at `traceidratio` 0.1) and the Node.js/Go modules' OTel
-  setup. These four crates must stay on matching major versions - if `cargo build` ever fails
-  there after a `cargo update`, bump all four together rather than one at a time.
+  with `quarkus3-virtual`'s traces (sampled at `traceidratio` 0.1), metrics and logs. These crates
+  must stay on matching major versions - if `cargo build` ever fails there after a `cargo update`,
+  bump them all together rather than one at a time.
+
+  On the `orm` path, a `GET /fruits` trace now has four spans: the `axum-tracing-opentelemetry`
+  HTTP middleware span, the application's `#[instrument]` span, and one `sea_orm.query_all` per
+  query SeaORM issues (two, matching `repository_orm.rs`'s documented strategy) - `sea-orm`'s own
+  `tracing-spans` feature (2.0.0-rc.29+), not a separate instrumentation crate. Metrics are Tokio
+  runtime gauges from `opentelemetry-instrumentation-tokio` (worker count, queue depth, busy
+  time) - request- and connection-pool-level metrics would need `sqlx-otel`, which cannot see the
+  `orm` path at all: `SqlxPostgresConnector::from_sqlx_postgres_pool` takes a plain `sqlx::PgPool`,
+  and SeaORM never calls `sqlx::Executor` on whatever pool object it's handed, so wrapping the pool
+  first would not instrument anything here. The `sql` path's queries still have no span or metric.

@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use sqlx::PgPool;
+use sqlx::{AssertSqlSafe, PgPool};
 use std::collections::HashMap;
 
 use crate::dto::{AddressDto, CreateFruitRequest, FruitDto, StoreDto, StoreFruitPriceDto};
@@ -101,8 +101,13 @@ impl FruitRepository for SqlFruitRepository {
     }
 
     async fn find_by_name(&self, name: &str) -> anyhow::Result<Option<FruitDto>> {
+        // sqlx 0.9's SqlSafeStr only accepts &'static str by default, to catch accidental
+        // interpolation of untrusted input into the query text. Safe here: the only runtime
+        // part is FRUIT_ROWS_SELECT itself (a compile-time const), `name` never touches the SQL
+        // string and goes through `.bind()` as a real parameter.
         let sql = format!("{FRUIT_ROWS_SELECT} WHERE f.name = $1");
-        let rows: Vec<FruitRow> = sqlx::query_as(&sql).bind(name).fetch_all(&self.pool).await?;
+        let rows: Vec<FruitRow> =
+            sqlx::query_as(AssertSqlSafe(sql)).bind(name).fetch_all(&self.pool).await?;
 
         Ok(group_fruit_rows(rows).into_iter().next())
     }
