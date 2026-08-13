@@ -210,7 +210,7 @@ takes measurably longer, as seen in the 1-core section below.
 |---|---|---|
 | spring4-virtual | 8 | 5.9 |
 | nodejs-orm | 4 | 6.0 |
-| quarkus3-virtual | 10 | 12.6 |
+| quarkus3-virtual | 11 | 12.6 |
 | go-orm | 1 | 43.7 |
 | rust-orm | 1 | 188.3 |
 | quarkus3-native | 10 | 314.4 |
@@ -251,6 +251,7 @@ takes measurably longer, as seen in the 1-core section below.
 | [`20260813_0240__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx128m-ParallelGC_3it.json`](20260813_0240__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx128m-ParallelGC_3it.json) | 2026-08-13T02:40:30Z | quarkus3-native, quarkus3-virtual, spring4-native, spring4-virtual | 3 | `-Xmx128m` `-XX:+UseParallelGC` | tuned |
 | [`20260813_0515__rust-orm__default_3it.json`](20260813_0515__rust-orm__default_3it.json) | 2026-08-13T05:15:14Z | rust-orm | 3 | no ceiling | tuned |
 | [`20260813_0545__rust-orm__default_3it.json`](20260813_0545__rust-orm__default_3it.json) | 2026-08-13T05:45:10Z | rust-orm | 3 | no ceiling | tuned |
+| [`20260813_1622__quarkus3-virtual__Xmx64m-ParallelGC_UnlockExperimentalVMOptions_XX:TrimNativeHeapInterval=5000_3it.json`](20260813_1622__quarkus3-virtual__Xmx64m-ParallelGC_UnlockExperimentalVMOptions_XX:TrimNativeHeapInterval=5000_3it.json) | 2026-08-13T16:22:13Z | quarkus3-virtual | 3 | `-Xmx64m` `-XX:+UseParallelGC  -XX:+UnlockExperimentalVMOptions -XX:TrimNativeHeapInterval=5000` | tuned |
 <!-- runs -->
 
 ## Results
@@ -321,6 +322,7 @@ One row per runtime, averaged over the run's iterations.
 | `20260813_0240` | spring4-virtual | 2 | 128m | 6.1 | - | - | 435.8 | 5 004 | 11.60 |
 | `20260813_0515` | rust-orm | 2 | - | 188.3 | - | - | 20.7 | 2 322 | 115.35 |
 | `20260813_0545` | rust-orm | 1 | - | 292.4 | - | - | 19.0 | 2 148 | 118.26 |
+| `20260813_1622` | quarkus3-virtual | 2 | 64m | 12.2 | - | - | 259.4 | 5 840 | 23.02 |
 <!-- results -->
 
 ### Column provenance
