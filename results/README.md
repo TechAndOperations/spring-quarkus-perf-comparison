@@ -311,6 +311,12 @@ the table but remain in the archived JSON.
 
 - **Density inherits the memory budget.** It's a throughput/RSS-under-load ratio, so a
   generous `-Xmx` mechanically degrades it without the runtime being at fault.
+- **This is not dedicated performance hardware.** Every run in this archive was executed
+  on Ubuntu under WSL on Windows 11, itself a VM accessed over Citrix on VMware
+  infrastructure with overprovisioning. Noisy-neighbour effects, host-level scheduling and
+  the extra virtualisation layers all add variance this setup cannot isolate. The relative
+  comparisons and trends should hold, but absolute numbers would benefit from re-running on
+  dedicated performance infrastructure before being treated as conclusive.
 
 ## Further reading
 
