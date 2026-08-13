@@ -71,7 +71,7 @@ def heap_note(xmx):
     """What distinguishes two points of the same runtime *within* one chart. The core
     count is not in here: each chart covers a single core count and says so in its
     subtitle, because runs across core counts are not comparable at all."""
-    return f"-Xmx {xmx}m" if xmx else "no ceiling"
+    return f"-Xmx {xmx}m" if xmx else ""
 
 
 def core_counts():
