@@ -6,6 +6,18 @@ The pipeline always writes to the same place (`/tmp/metrics.json` by default, vi
 `--output-dir`) and **overwrites the file on every run**. Results therefore survive only
 until the next run — hence this archive.
 
+## Runtime versions
+
+| Component | Version |
+|---|---|
+| Java (Temurin) | 25.0.3 |
+| GraalVM CE | 25.0.2 |
+| Quarkus | 3.38.1 |
+| Spring Boot | 4.1.0 |
+| Node.js | 22.22.1 |
+| Go | 1.26.0 |
+| Rust | 1.97.1 |
+
 ## The benchmark suite
 
 The project compares technology stacks on **one and the same application**: the `Fruit` /
