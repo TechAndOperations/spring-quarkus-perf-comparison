@@ -254,6 +254,7 @@ takes measurably longer, as seen in the 1-core section below.
 | [`20260813_1622__quarkus3-virtual__Xmx64m-ParallelGC_UnlockExperimentalVMOptions_XX:TrimNativeHeapInterval=5000_3it.json`](20260813_1622__quarkus3-virtual__Xmx64m-ParallelGC_UnlockExperimentalVMOptions_XX:TrimNativeHeapInterval=5000_3it.json) | 2026-08-13T16:22:13Z | quarkus3-virtual | 3 | `-Xmx64m` `-XX:+UseParallelGC  -XX:+UnlockExperimentalVMOptions -XX:TrimNativeHeapInterval=5000` | tuned |
 | [`20260813_1640__spring4-virtual__Xmx96m-ParallelGC_UnlockExperimentalVMOptions_XX:TrimNativeHeapInterval=5000_3it.json`](20260813_1640__spring4-virtual__Xmx96m-ParallelGC_UnlockExperimentalVMOptions_XX:TrimNativeHeapInterval=5000_3it.json) | 2026-08-13T16:40:10Z | spring4-virtual | 3 | `-Xmx96m` `-XX:+UseParallelGC  -XX:+UnlockExperimentalVMOptions -XX:TrimNativeHeapInterval=5000` | tuned |
 | [`20260814_0313__go-orm__default_3it.json`](20260814_0313__go-orm__default_3it.json) | 2026-08-14T03:13:59Z | go-orm | 3 | no ceiling | tuned |
+| [`20260814_0341__go-orm__default_3it.json`](20260814_0341__go-orm__default_3it.json) | 2026-08-14T03:41:33Z | go-orm | 3 | no ceiling | tuned |
 <!-- runs -->
 
 ## Results
@@ -327,6 +328,7 @@ One row per runtime, averaged over the run's iterations.
 | `20260813_1622` | quarkus3-virtual | 2 | 64m | 12.2 | - | - | 259.4 | 5 840 | 23.02 |
 | `20260813_1640` | spring4-virtual | 2 | 96m | 6.3 | - | - | 350.9 | 4 562 | 13.12 |
 | `20260814_0313` | go-orm | 2 | - | 43.0 | 43 | 28.5 | 49.9 | 3 173 | 67.29 |
+| `20260814_0341` | go-orm | 1 | - | 79.5 | 37 | 28.1 | 47.5 | 2 220 | 47.17 |
 <!-- results -->
 
 ### Column provenance
