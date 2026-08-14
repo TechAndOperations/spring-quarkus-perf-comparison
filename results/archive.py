@@ -167,6 +167,8 @@ def main():
         if density is None and load.get("avThroughput") and load.get("avMaxRss"):
             density = load["avThroughput"] / load["avMaxRss"]
 
+        load_model = (config.get("load") or {}).get("model") or "closed"
+
         result_rows.append(
             f"| `{name.split('__')[0]}` "
             f"| {rt} "
@@ -177,7 +179,8 @@ def main():
             f"| {num(rss.get('avFirstRequestRss'), 1)} "
             f"| {num(load.get('avMaxRss'), 1)} "
             f"| {num(load.get('avThroughput'), 0, thousands=True)} "
-            f"| {num(density, 2)} |"
+            f"| {num(density, 2)} "
+            f"| {load_model} |"
         )
 
     # Rows go *above* the marker, which therefore sits on the last line of each table. A marker
