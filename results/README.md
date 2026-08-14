@@ -254,6 +254,7 @@ takes measurably longer, as seen in the 1-core section below.
 | [`20260814_0313__go-orm__default_3it.json`](20260814_0313__go-orm__default_3it.json) | 2026-08-14T03:13:59Z | go-orm | 3 | no ceiling | tuned |
 | [`20260814_0341__go-orm__default_3it.json`](20260814_0341__go-orm__default_3it.json) | 2026-08-14T03:41:33Z | go-orm | 3 | no ceiling | tuned |
 | [`20260814_0855__rust-orm__default_3it.json`](20260814_0855__rust-orm__default_3it.json) | 2026-08-14T08:55:19Z | rust-orm | 3 | no ceiling | tuned |
+| [`20260814_0927__rust-orm__default_3it.json`](20260814_0927__rust-orm__default_3it.json) | 2026-08-14T09:27:58Z | rust-orm | 3 | no ceiling | tuned |
 <!-- runs -->
 
 ## Results
@@ -327,6 +328,7 @@ One row per runtime, averaged over the run's iterations.
 | `20260814_0313` | go-orm | 2 | - | 43.0 | 43 | 28.5 | 49.9 | 3 173 | 67.29 |
 | `20260814_0341` | go-orm | 1 | - | 79.5 | 37 | 28.1 | 47.5 | 2 220 | 47.17 |
 | `20260814_0855` | rust-orm | 2 | - | 194.5 | 43 | 10.2 | 21.1 | 2 403 | 118.34 |
+| `20260814_0927` | rust-orm | 1 | - | 298.3 | 33 | 10.1 | 19.1 | 2 288 | 123.31 |
 <!-- results -->
 
 ### Column provenance
