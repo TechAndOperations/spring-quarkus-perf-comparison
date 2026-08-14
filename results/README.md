@@ -183,22 +183,30 @@ in the table.
 
 ### 2 cores
 
+#### Throughput density
+
 ![Throughput density, 2 cores](density-ranking-2c.svg)
 
 A dot plot on a logarithmic axis, not bars: density spans a factor of 62, and since a bar's
 length *is* its magnitude, a log axis would misrepresent every ratio. A dot encodes by
 position, which the log scale represents honestly.
 
+#### Startup cost
+
 ![Startup cost, 2 cores](startup-cost-2c.svg)
 
 The two costs paid before serving anything at all, crossed on a scatter rather than laid out
 as two series — different units on the same chart would force a dual axis.
+
+#### Peak throughput
 
 ![Peak throughput, 2 cores](throughput-ranking-2c.svg)
 
 Each runtime appears only once, at its best rung — and **it's not the same rung depending on
 the measure**: raw throughput peaks at `-Xmx` 512 or 384 MiB, density at 128 MiB. The
 ranking partially flips as a result, with Rust first on density and fifth on throughput.
+
+#### Build performance
 
 Average build time per runtime, across every archived 2-core run regardless of `-Xmx`
 (build time doesn't depend on the heap ceiling, so splitting by rung would only
@@ -217,11 +225,62 @@ takes measurably longer, as seen in the 1-core section below.
 | spring4-native | 8 | 519.7 |
 <!-- build-times:end -->
 
+#### Constant rate (open-loop)
+
+Every measure above uses Hyperfoil's closed-loop `always` model: a fixed number of
+concurrent users loop as fast as the server allows, which is what finds a server's maximum
+sustainable throughput but self-throttles the moment the server slows down — a slowdown
+never shows up as added latency, only as reduced throughput. This run instead applies
+Hyperfoil's open-loop `constantRate` model, which generates requests at a fixed rate
+regardless of how fast the server responds, so a real slowdown shows up as rising latency
+and queueing instead of being silently absorbed.
+
+The scenario has three phases:
+
+- **Warmup** — closed-loop (`always`), 100 concurrent connections hitting `GET /fruits` for
+  up to 2 minutes. Kept closed-loop deliberately: an open-loop generator has no
+  self-throttling, so it would blow through the session limit within the first second
+  against a server whose very first real requests can take seconds (lazy DB pool init,
+  class loading) — the closed-loop warmup gets the JVM JIT-warm without that risk.
+- **Cooldown** — a 30-second pause (`noop`) between warmup and the load test.
+- **Load test** — open-loop (`constantRate`), generating requests at a fixed rate of 2000
+  req/s for 30 seconds, with a safety cap of 300 concurrent in-flight sessions
+  (`maxSessions`) — Hyperfoil fails the phase if that cap is exceeded rather than letting
+  sessions queue without bound.
+
+The five runtimes benchmarked here — quarkus3-virtual, quarkus3-native, spring4-virtual,
+go-orm and rust-orm — were selected because the throughput-density test above showed each
+of them able to sustain at least 2000 req/s; testing at a target rate a server can't even
+reach under ideal closed-loop conditions wouldn't measure anything meaningful.
+
+| Metric | quarkus3-virtual | quarkus3-native | go-orm | rust-orm | spring4-virtual |
+|---|---|---|---|---|---|
+| Throughput avg (req/s) | 1999.4 | 2001.9 | 1997.8 | 1975.0 | 1347.2 ⚠️ |
+| RSS under load avg (MB) | 302.2 | 149.5 | 52.8 | 29.5 | 353.2 |
+| Density (req/s per MB) | 6.62 | 13.39 | 37.85 | 66.85 | 3.82 |
+| Mean latency (ms) | 2.22 | 5.66 | 21.19 | 21.35 | 177.6 ⚠️ |
+| p50 (ms) | 1.87 | 2.72 | 15.14 | 4.96 | 153.5 ⚠️ |
+| p99 (ms) | 8.65 | 74.4 | 103.8 | 243.1 | 589.3 ⚠️ |
+| p99.9 (ms) | 30.9 | 145.2 | 172.5 | 299.9 | 951.3 ⚠️ |
+| Max (ms) | 55.5 | 222.3 | 304.1 | 343.8 | 1593 ⚠️ |
+| "Exceeded session limit" occurrences | 0 | 1 | 1 | 2 | 3 |
+
+spring4-virtual is the clear outlier: throughput collapses across its own three iterations
+(1829 → 1331 → 881 req/s) with a matching latency blowup, at the same `CONNECTIONS=300`
+value the other four runtimes hold steady at — a reproducible instability under the
+open-loop model, not a one-off fluke.
+
 ### 1 core
+
+#### Throughput density
 
 ![Throughput density, 1 core](density-ranking-1c.svg)
 
+#### Startup cost
+
 ![Startup cost, 1 core](startup-cost-1c.svg)
+
+#### Peak throughput
 
 ![Peak throughput, 1 core](throughput-ranking-1c.svg)
 
@@ -255,80 +314,86 @@ takes measurably longer, as seen in the 1-core section below.
 | [`20260814_0341__go-orm__default_3it.json`](20260814_0341__go-orm__default_3it.json) | 2026-08-14T03:41:33Z | go-orm | 3 | no ceiling | tuned |
 | [`20260814_0855__rust-orm__default_3it.json`](20260814_0855__rust-orm__default_3it.json) | 2026-08-14T08:55:19Z | rust-orm | 3 | no ceiling | tuned |
 | [`20260814_0927__rust-orm__default_3it.json`](20260814_0927__rust-orm__default_3it.json) | 2026-08-14T09:27:58Z | rust-orm | 3 | no ceiling | tuned |
+| [`20260814_1013__5runtimes__Xmx96m-ParallelGC_UnlockExperimentalVMOptions_XX:TrimNativeHeapInterval=5000_3it.json`](20260814_1013__5runtimes__Xmx96m-ParallelGC_UnlockExperimentalVMOptions_XX:TrimNativeHeapInterval=5000_3it.json) | 2026-08-14T10:13:27Z | go-orm, quarkus3-native, quarkus3-virtual, rust-orm, spring4-virtual | 3 | `-Xmx96m` `-XX:+UseParallelGC -XX:+UnlockExperimentalVMOptions -XX:TrimNativeHeapInterval=5000` | tuned |
 <!-- runs -->
 
 ## Results
 
 One row per runtime, averaged over the run's iterations.
 
-| Run | Runtime | Cores | `-Xmx` | Build (s) | TTFR (ms) | RSS 1st req (MiB) | RSS under load (MiB) | Throughput (tps) | Density (tps/MiB) |
-|---|---|---|---|---|---|---|---|---|---|
-| `20260810_1522` | quarkus3-native | 2 | 512m | 326.5 | 100 | 99.3 | 246.4 | 4 138 | 17.42 |
-| `20260810_1522` | quarkus3-virtual | 2 | 512m | 12.5 | 3 216 | 260.7 | 499.3 | 7 032 | 15.03 |
-| `20260810_1522` | spring4-native | 2 | 512m | 531.8 | 938 | 273.7 | 390.2 | 1 659 | 4.32 |
-| `20260810_1522` | spring4-virtual | 2 | 512m | 5.7 | 9 045 | 445.6 | 571.4 | 5 506 | 9.87 |
-| `20260810_1723` | quarkus3-native | 2 | 384m | 314.4 | 109 | 98.9 | 246.0 | 4 078 | 17.97 |
-| `20260810_1723` | quarkus3-virtual | 2 | 384m | 12.9 | 3 339 | 258.0 | 423.6 | 6 950 | 17.47 |
-| `20260810_1723` | spring4-native | 2 | 384m | 517.1 | 1 011 | 274.4 | 346.2 | 1 665 | 4.91 |
-| `20260810_1723` | spring4-virtual | 2 | 384m | 5.5 | 8 818 | 421.8 | 556.6 | 5 547 | 10.36 |
-| `20260810_1925` | quarkus3-native | 2 | 256m | 307.8 | 123 | 99.3 | 205.9 | 4 007 | 20.04 |
-| `20260810_1925` | quarkus3-virtual | 2 | 256m | 12.6 | 3 318 | 251.2 | 478.4 | 6 653 | 14.20 |
-| `20260810_1925` | spring4-native | 2 | 256m | 524.6 | 925 | 265.1 | 284.3 | 1 622 | 5.92 |
-| `20260810_1925` | spring4-virtual | 2 | 256m | 5.6 | 8 824 | 373.9 | 546.4 | 5 450 | 10.34 |
-| `20260811_0338` | quarkus3-native | 2 | 128m | 309.9 | 132 | 99.4 | 168.5 | 3 390 | 21.52 |
-| `20260811_0338` | quarkus3-virtual | 2 | 128m | 13.0 | 3 501 | 245.1 | 356.7 | 6 336 | 18.47 |
-| `20260811_0338` | spring4-native | 2 | 128m | 521.3 | 1 027 | 233.3 | 250.2 | 1 501 | 6.10 |
-| `20260811_0338` | spring4-virtual | 2 | 128m | 6.1 | 9 278 | 341.2 | 431.7 | 4 955 | 12.05 |
-| `20260811_0548` | quarkus3-native | 2 | 64m | 315.7 | 111 | 99.3 | 142.0 | 2 798 | 20.69 |
-| `20260811_0655` | go-orm | 2 | - | 43.7 | 51 | 28.7 | 51.4 | 3 128 | 62.57 |
-| `20260811_0655` | nodejs-orm | 2 | - | 6.0 | 1 557 | 151.4 | 231.3 | 680 | 3.00 |
-| `20260811_0914` | nodejs-orm | 2 | 384m | 5.6 | 1 567 | 151.3 | 231.1 | 677 | 3.05 |
-| `20260811_0935` | nodejs-orm | 2 | 256m | 6.3 | 1 747 | 151.4 | 225.8 | 661 | 3.00 |
-| `20260811_0956` | nodejs-orm | 2 | 128m | 5.9 | 1 698 | 151.0 | 226.1 | 700 | 3.11 |
-| `20260811_1031` | go-orm | 1 | - | 84.6 | 43 | 28.1 | 48.4 | 2 111 | 45.00 |
-| `20260811_1031` | go-sql | 1 | - | 84.2 | 37 | 27.8 | 44.5 | 4 605 | 110.55 |
-| `20260811_1031` | nodejs-orm | 1 | 512m | 7.3 | 1 761 | 180.0 | 219.9 | 521 | 2.47 |
-| `20260811_1031` | nodejs-sql | 1 | 512m | 6.8 | 1 693 | 160.3 | 212.1 | 972 | 4.63 |
-| `20260811_1031` | quarkus3-native | 1 | 128m | 588.0 | 101 | 99.0 | 162.6 | 1 922 | 11.89 |
-| `20260811_1031` | quarkus3-virtual | 1 | 128m | 22.2 | 6 154 | 239.1 | 347.6 | 3 604 | 10.74 |
-| `20260811_1031` | spring4-native | 1 | 128m | 946.6 | 1 047 | 238.6 | 251.0 | 769 | 3.18 |
-| `20260811_1031` | spring4-virtual | 1 | 128m | 10.5 | 18 374 | 336.0 | 430.1 | 2 793 | 6.81 |
-| `20260812_0621` | quarkus3-virtual | 2 | 512m | 12.2 | - | - | 796.3 | 5 629 | 7.24 |
-| `20260812_0639` | quarkus3-native | 2 | 48m | 323.0 | - | - | 134.7 | 2 060 | 16.59 |
-| `20260812_0639` | quarkus3-virtual | 2 | 48m | 12.5 | - | - | 285.7 | 5 638 | 19.93 |
-| `20260812_0723` | quarkus3-native | 2 | 64m | 320.3 | - | - | 136.0 | 2 363 | 19.68 |
-| `20260812_0723` | quarkus3-virtual | 2 | 64m | 13.0 | - | - | 302.7 | 6 215 | 21.37 |
-| `20260812_0811` | spring4-native | 2 | 96m | 531.5 | - | - | 242.4 | 1 413 | 5.97 |
-| `20260812_0811` | spring4-virtual | 2 | 96m | 6.1 | - | - | 394.8 | 4 521 | 12.00 |
-| `20260812_0906` | quarkus3-native | 1 | 96m | 591.8 | - | - | 155.7 | 1 866 | 12.19 |
-| `20260812_0906` | quarkus3-virtual | 1 | 96m | 24.1 | - | - | 328.0 | 3 857 | 12.06 |
-| `20260812_0906` | spring4-native | 1 | 96m | 956.8 | - | - | 241.8 | 787 | 3.29 |
-| `20260812_0906` | spring4-virtual | 1 | 96m | 11.3 | - | - | 388.6 | 2 665 | 6.94 |
-| `20260812_1136` | quarkus3-native | 1 | 64m | 599.4 | - | - | 145.1 | 1 636 | 11.65 |
-| `20260812_1136` | quarkus3-virtual | 1 | 64m | 22.2 | - | - | 298.2 | 3 666 | 12.36 |
-| `20260812_1136` | spring4-native | 1 | 64m | 950.6 | - | - | 227.9 | 683 | 3.10 |
-| `20260812_1136` | spring4-virtual | 1 | 64m | 11.6 | - | - | 347.2 | 704 | 2.16 |
-| `20260812_1513` | quarkus3-native | 1 | 48m | 619.1 | - | - | 134.2 | 1 486 | 11.08 |
-| `20260812_1513` | quarkus3-virtual | 1 | 48m | 22.8 | - | - | 282.2 | 3 475 | 12.35 |
-| `20260812_1513` | spring4-native | 1 | 48m | 1028.6 | - | - | 215.2 | 184 | 0.87 |
-| `20260812_1732` | quarkus3-native | 2 | 96m | 311.2 | - | - | 155.4 | 3 418 | 22.86 |
-| `20260812_1732` | quarkus3-virtual | 2 | 96m | 12.5 | - | - | 338.8 | 6 417 | 19.43 |
-| `20260812_1732` | spring4-native | 2 | 96m | 506.6 | - | - | 241.2 | 1 402 | 5.98 |
-| `20260812_1732` | spring4-virtual | 2 | 96m | 5.9 | - | - | 400.7 | 4 575 | 12.10 |
-| `20260812_1921` | quarkus3-native | 2 | 64m | 305.3 | - | - | 138.4 | 2 682 | 21.21 |
-| `20260812_1921` | quarkus3-virtual | 2 | 64m | 12.5 | - | - | 307.2 | 6 242 | 20.59 |
-| `20260812_1921` | spring4-native | 2 | 64m | 511.5 | - | - | 227.3 | 1 214 | 5.35 |
-| `20260812_1921` | spring4-virtual | 2 | 64m | 5.8 | - | - | 353.5 | 1 029 | 3.28 |
-| `20260813_0240` | quarkus3-native | 2 | 128m | 310.0 | - | - | 163.6 | 3 368 | 21.13 |
-| `20260813_0240` | quarkus3-virtual | 2 | 128m | 12.8 | - | - | 355.0 | 6 413 | 18.57 |
-| `20260813_0240` | spring4-native | 2 | 128m | 513.4 | - | - | 250.6 | 1 466 | 5.93 |
-| `20260813_0240` | spring4-virtual | 2 | 128m | 6.1 | - | - | 435.8 | 5 004 | 11.60 |
-| `20260813_1622` | quarkus3-virtual | 2 | 64m | 12.2 | - | - | 259.4 | 5 840 | 23.02 |
-| `20260813_1640` | spring4-virtual | 2 | 96m | 6.3 | - | - | 350.9 | 4 562 | 13.12 |
-| `20260814_0313` | go-orm | 2 | - | 43.0 | 43 | 28.5 | 49.9 | 3 173 | 67.29 |
-| `20260814_0341` | go-orm | 1 | - | 79.5 | 37 | 28.1 | 47.5 | 2 220 | 47.17 |
-| `20260814_0855` | rust-orm | 2 | - | 194.5 | 43 | 10.2 | 21.1 | 2 403 | 118.34 |
-| `20260814_0927` | rust-orm | 1 | - | 298.3 | 33 | 10.1 | 19.1 | 2 288 | 123.31 |
+| Run | Runtime | Cores | `-Xmx` | Build (s) | TTFR (ms) | RSS 1st req (MiB) | RSS under load (MiB) | Throughput (tps) | Density (tps/MiB) | Load model |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `20260810_1522` | quarkus3-native | 2 | 512m | 326.5 | 100 | 99.3 | 246.4 | 4 138 | 17.42 | closed |
+| `20260810_1522` | quarkus3-virtual | 2 | 512m | 12.5 | 3 216 | 260.7 | 499.3 | 7 032 | 15.03 | closed |
+| `20260810_1522` | spring4-native | 2 | 512m | 531.8 | 938 | 273.7 | 390.2 | 1 659 | 4.32 | closed |
+| `20260810_1522` | spring4-virtual | 2 | 512m | 5.7 | 9 045 | 445.6 | 571.4 | 5 506 | 9.87 | closed |
+| `20260810_1723` | quarkus3-native | 2 | 384m | 314.4 | 109 | 98.9 | 246.0 | 4 078 | 17.97 | closed |
+| `20260810_1723` | quarkus3-virtual | 2 | 384m | 12.9 | 3 339 | 258.0 | 423.6 | 6 950 | 17.47 | closed |
+| `20260810_1723` | spring4-native | 2 | 384m | 517.1 | 1 011 | 274.4 | 346.2 | 1 665 | 4.91 | closed |
+| `20260810_1723` | spring4-virtual | 2 | 384m | 5.5 | 8 818 | 421.8 | 556.6 | 5 547 | 10.36 | closed |
+| `20260810_1925` | quarkus3-native | 2 | 256m | 307.8 | 123 | 99.3 | 205.9 | 4 007 | 20.04 | closed |
+| `20260810_1925` | quarkus3-virtual | 2 | 256m | 12.6 | 3 318 | 251.2 | 478.4 | 6 653 | 14.20 | closed |
+| `20260810_1925` | spring4-native | 2 | 256m | 524.6 | 925 | 265.1 | 284.3 | 1 622 | 5.92 | closed |
+| `20260810_1925` | spring4-virtual | 2 | 256m | 5.6 | 8 824 | 373.9 | 546.4 | 5 450 | 10.34 | closed |
+| `20260811_0338` | quarkus3-native | 2 | 128m | 309.9 | 132 | 99.4 | 168.5 | 3 390 | 21.52 | closed |
+| `20260811_0338` | quarkus3-virtual | 2 | 128m | 13.0 | 3 501 | 245.1 | 356.7 | 6 336 | 18.47 | closed |
+| `20260811_0338` | spring4-native | 2 | 128m | 521.3 | 1 027 | 233.3 | 250.2 | 1 501 | 6.10 | closed |
+| `20260811_0338` | spring4-virtual | 2 | 128m | 6.1 | 9 278 | 341.2 | 431.7 | 4 955 | 12.05 | closed |
+| `20260811_0548` | quarkus3-native | 2 | 64m | 315.7 | 111 | 99.3 | 142.0 | 2 798 | 20.69 | closed |
+| `20260811_0655` | go-orm | 2 | - | 43.7 | 51 | 28.7 | 51.4 | 3 128 | 62.57 | closed |
+| `20260811_0655` | nodejs-orm | 2 | - | 6.0 | 1 557 | 151.4 | 231.3 | 680 | 3.00 | closed |
+| `20260811_0914` | nodejs-orm | 2 | 384m | 5.6 | 1 567 | 151.3 | 231.1 | 677 | 3.05 | closed |
+| `20260811_0935` | nodejs-orm | 2 | 256m | 6.3 | 1 747 | 151.4 | 225.8 | 661 | 3.00 | closed |
+| `20260811_0956` | nodejs-orm | 2 | 128m | 5.9 | 1 698 | 151.0 | 226.1 | 700 | 3.11 | closed |
+| `20260811_1031` | go-orm | 1 | - | 84.6 | 43 | 28.1 | 48.4 | 2 111 | 45.00 | closed |
+| `20260811_1031` | go-sql | 1 | - | 84.2 | 37 | 27.8 | 44.5 | 4 605 | 110.55 | closed |
+| `20260811_1031` | nodejs-orm | 1 | 512m | 7.3 | 1 761 | 180.0 | 219.9 | 521 | 2.47 | closed |
+| `20260811_1031` | nodejs-sql | 1 | 512m | 6.8 | 1 693 | 160.3 | 212.1 | 972 | 4.63 | closed |
+| `20260811_1031` | quarkus3-native | 1 | 128m | 588.0 | 101 | 99.0 | 162.6 | 1 922 | 11.89 | closed |
+| `20260811_1031` | quarkus3-virtual | 1 | 128m | 22.2 | 6 154 | 239.1 | 347.6 | 3 604 | 10.74 | closed |
+| `20260811_1031` | spring4-native | 1 | 128m | 946.6 | 1 047 | 238.6 | 251.0 | 769 | 3.18 | closed |
+| `20260811_1031` | spring4-virtual | 1 | 128m | 10.5 | 18 374 | 336.0 | 430.1 | 2 793 | 6.81 | closed |
+| `20260812_0621` | quarkus3-virtual | 2 | 512m | 12.2 | - | - | 796.3 | 5 629 | 7.24 | closed |
+| `20260812_0639` | quarkus3-native | 2 | 48m | 323.0 | - | - | 134.7 | 2 060 | 16.59 | closed |
+| `20260812_0639` | quarkus3-virtual | 2 | 48m | 12.5 | - | - | 285.7 | 5 638 | 19.93 | closed |
+| `20260812_0723` | quarkus3-native | 2 | 64m | 320.3 | - | - | 136.0 | 2 363 | 19.68 | closed |
+| `20260812_0723` | quarkus3-virtual | 2 | 64m | 13.0 | - | - | 302.7 | 6 215 | 21.37 | closed |
+| `20260812_0811` | spring4-native | 2 | 96m | 531.5 | - | - | 242.4 | 1 413 | 5.97 | closed |
+| `20260812_0811` | spring4-virtual | 2 | 96m | 6.1 | - | - | 394.8 | 4 521 | 12.00 | closed |
+| `20260812_0906` | quarkus3-native | 1 | 96m | 591.8 | - | - | 155.7 | 1 866 | 12.19 | closed |
+| `20260812_0906` | quarkus3-virtual | 1 | 96m | 24.1 | - | - | 328.0 | 3 857 | 12.06 | closed |
+| `20260812_0906` | spring4-native | 1 | 96m | 956.8 | - | - | 241.8 | 787 | 3.29 | closed |
+| `20260812_0906` | spring4-virtual | 1 | 96m | 11.3 | - | - | 388.6 | 2 665 | 6.94 | closed |
+| `20260812_1136` | quarkus3-native | 1 | 64m | 599.4 | - | - | 145.1 | 1 636 | 11.65 | closed |
+| `20260812_1136` | quarkus3-virtual | 1 | 64m | 22.2 | - | - | 298.2 | 3 666 | 12.36 | closed |
+| `20260812_1136` | spring4-native | 1 | 64m | 950.6 | - | - | 227.9 | 683 | 3.10 | closed |
+| `20260812_1136` | spring4-virtual | 1 | 64m | 11.6 | - | - | 347.2 | 704 | 2.16 | closed |
+| `20260812_1513` | quarkus3-native | 1 | 48m | 619.1 | - | - | 134.2 | 1 486 | 11.08 | closed |
+| `20260812_1513` | quarkus3-virtual | 1 | 48m | 22.8 | - | - | 282.2 | 3 475 | 12.35 | closed |
+| `20260812_1513` | spring4-native | 1 | 48m | 1028.6 | - | - | 215.2 | 184 | 0.87 | closed |
+| `20260812_1732` | quarkus3-native | 2 | 96m | 311.2 | - | - | 155.4 | 3 418 | 22.86 | closed |
+| `20260812_1732` | quarkus3-virtual | 2 | 96m | 12.5 | - | - | 338.8 | 6 417 | 19.43 | closed |
+| `20260812_1732` | spring4-native | 2 | 96m | 506.6 | - | - | 241.2 | 1 402 | 5.98 | closed |
+| `20260812_1732` | spring4-virtual | 2 | 96m | 5.9 | - | - | 400.7 | 4 575 | 12.10 | closed |
+| `20260812_1921` | quarkus3-native | 2 | 64m | 305.3 | - | - | 138.4 | 2 682 | 21.21 | closed |
+| `20260812_1921` | quarkus3-virtual | 2 | 64m | 12.5 | - | - | 307.2 | 6 242 | 20.59 | closed |
+| `20260812_1921` | spring4-native | 2 | 64m | 511.5 | - | - | 227.3 | 1 214 | 5.35 | closed |
+| `20260812_1921` | spring4-virtual | 2 | 64m | 5.8 | - | - | 353.5 | 1 029 | 3.28 | closed |
+| `20260813_0240` | quarkus3-native | 2 | 128m | 310.0 | - | - | 163.6 | 3 368 | 21.13 | closed |
+| `20260813_0240` | quarkus3-virtual | 2 | 128m | 12.8 | - | - | 355.0 | 6 413 | 18.57 | closed |
+| `20260813_0240` | spring4-native | 2 | 128m | 513.4 | - | - | 250.6 | 1 466 | 5.93 | closed |
+| `20260813_0240` | spring4-virtual | 2 | 128m | 6.1 | - | - | 435.8 | 5 004 | 11.60 | closed |
+| `20260813_1622` | quarkus3-virtual | 2 | 64m | 12.2 | - | - | 259.4 | 5 840 | 23.02 | closed |
+| `20260813_1640` | spring4-virtual | 2 | 96m | 6.3 | - | - | 350.9 | 4 562 | 13.12 | closed |
+| `20260814_0313` | go-orm | 2 | - | 43.0 | 43 | 28.5 | 49.9 | 3 173 | 67.29 | closed |
+| `20260814_0341` | go-orm | 1 | - | 79.5 | 37 | 28.1 | 47.5 | 2 220 | 47.17 | closed |
+| `20260814_0855` | rust-orm | 2 | - | 194.5 | 43 | 10.2 | 21.1 | 2 403 | 118.34 | closed |
+| `20260814_0927` | rust-orm | 1 | - | 298.3 | 33 | 10.1 | 19.1 | 2 288 | 123.31 | closed |
+| `20260814_1013` | go-orm | 2 | - | 42.9 | - | - | 52.8 | 1 998 | 39.03 | open |
+| `20260814_1013` | quarkus3-native | 2 | 96m | 320.2 | - | - | 149.5 | 2 002 | 14.71 | open |
+| `20260814_1013` | quarkus3-virtual | 2 | 96m | 13.0 | - | - | 302.2 | 1 999 | 7.00 | open |
+| `20260814_1013` | rust-orm | 2 | - | 182.7 | - | - | 29.5 | 1 975 | 79.89 | open |
+| `20260814_1013` | spring4-virtual | 2 | 96m | 5.6 | - | - | 353.2 | 1 347 | 5.23 | open |
 <!-- results -->
 
 ### Column provenance
@@ -343,6 +408,7 @@ One row per runtime, averaged over the run's iterations.
 | RSS under load | `load.avMaxRss` | `run-load-test` |
 | Throughput | `load.avThroughput` | `run-load-test` |
 | Density | `load.maxThroughputDensity` | `run-load-test` |
+| Load model | `config.load.model`, defaults to `closed` when absent (pre-open-loop archives) | `run-load-test` |
 
 A dash marks a test not selected in `--tests`. RSS **at startup** (`rss.avStartupRss`), the
 native binary size (`build.native.binarySize`) and GraalVM's reflection counters aren't in
