@@ -805,7 +805,8 @@ scripts:
               run@hyperfoil \
                 -d ${{RUNTIME_NAME}}-${{ITERATION}} \
                 -o ${{HYPERFOIL_LOGS_DIR}}/${{RUNTIME_NAME}}-${{ITERATION}} \
-                ${{LOAD_TESTS_SCRIPTS_DIR}}/load-test-fixed-threads-read-all.hf.yml \
+                -PTARGET_RATE=${{config.load.target_rate}} \
+                ${{LOAD_TESTS_SCRIPTS_DIR}}/${{= '${{config.load.model}}' == 'open' ? 'load-test-constant-rate-read-all.hf.yml' : 'load-test-fixed-threads-read-all.hf.yml' }} \
                 </dev/null &>${{REPO_DIR}}/logs/hf-${{RUNTIME_NAME}}-${{ITERATION}}.log &
         - sh: HF_PID=$! && echo $HF_PID
           then:
