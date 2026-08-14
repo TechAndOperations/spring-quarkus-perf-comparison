@@ -253,17 +253,17 @@ go-orm and rust-orm — were selected because the throughput-density test above 
 of them able to sustain at least 2000 req/s; testing at a target rate a server can't even
 reach under ideal closed-loop conditions wouldn't measure anything meaningful.
 
-| Metric | quarkus3-virtual (96m) | quarkus3-virtual (64m) | quarkus3-native | go-orm | rust-orm | spring4-virtual |
-|---|---|---|---|---|---|---|
-| Throughput avg (req/s) | 1999.4 | 1999.1 | 2001.9 | 1997.8 | 1975.0 | 1347.2 ⚠️ |
-| RSS under load avg (MB) | 302.2 | 264.2 | 149.5 | 52.8 | 29.5 | 353.2 |
-| Density (req/s per MB) | 6.62 | 7.58 | 13.39 | 37.85 | 66.85 | 3.82 |
-| Mean latency (ms) | 2.22 | 4.52 | 5.66 | 21.19 | 21.35 | 177.6 ⚠️ |
-| p50 (ms) | 1.87 | 1.96 | 2.72 | 15.14 | 4.96 | 153.5 ⚠️ |
-| p99 (ms) | 8.65 | 66.2 | 74.4 | 103.8 | 243.1 | 589.3 ⚠️ |
-| p99.9 (ms) | 30.9 | 131.0 | 145.2 | 172.5 | 299.9 | 951.3 ⚠️ |
-| Max (ms) | 55.5 | 153.1 | 222.3 | 304.1 | 343.8 | 1593 ⚠️ |
-| "Exceeded session limit" occurrences | 0 | 1 | 1 | 1 | 2 | 3 |
+| Metric | quarkus3-virtual (64m) | quarkus3-native (96m) | go-orm | rust-orm | spring4-virtual (96m) |
+|---|---|---|---|---|---|
+| Throughput avg (req/s) | 1999.1 | 2001.9 | 1997.8 | 1975.0 | 1347.2 ⚠️ |
+| RSS under load avg (MB) | 264.2 | 149.5 | 52.8 | 29.5 | 353.2 |
+| Density (req/s per MB) | 7.58 | 13.39 | 37.85 | 66.85 | 3.82 |
+| Mean latency (ms) | 4.52 | 5.66 | 21.19 | 21.35 | 177.6 ⚠️ |
+| p50 (ms) | 1.96 | 2.72 | 15.14 | 4.96 | 153.5 ⚠️ |
+| p99 (ms) | 66.2 | 74.4 | 103.8 | 243.1 | 589.3 ⚠️ |
+| p99.9 (ms) | 131.0 | 145.2 | 172.5 | 299.9 | 951.3 ⚠️ |
+| Max (ms) | 153.1 | 222.3 | 304.1 | 343.8 | 1593 ⚠️ |
+| "Exceeded session limit" occurrences | 1 | 1 | 1 | 2 | 3 |
 
 spring4-virtual is the clear outlier: throughput collapses across its own three iterations
 (1829 → 1331 → 881 req/s) with a matching latency blowup, at the same `CONNECTIONS=300`
