@@ -253,22 +253,28 @@ go-orm and rust-orm — were selected because the throughput-density test above 
 of them able to sustain at least 2000 req/s; testing at a target rate a server can't even
 reach under ideal closed-loop conditions wouldn't measure anything meaningful.
 
-| Metric | quarkus3-virtual | quarkus3-native | go-orm | rust-orm | spring4-virtual |
-|---|---|---|---|---|---|
-| Throughput avg (req/s) | 1999.4 | 2001.9 | 1997.8 | 1975.0 | 1347.2 ⚠️ |
-| RSS under load avg (MB) | 302.2 | 149.5 | 52.8 | 29.5 | 353.2 |
-| Density (req/s per MB) | 6.62 | 13.39 | 37.85 | 66.85 | 3.82 |
-| Mean latency (ms) | 2.22 | 5.66 | 21.19 | 21.35 | 177.6 ⚠️ |
-| p50 (ms) | 1.87 | 2.72 | 15.14 | 4.96 | 153.5 ⚠️ |
-| p99 (ms) | 8.65 | 74.4 | 103.8 | 243.1 | 589.3 ⚠️ |
-| p99.9 (ms) | 30.9 | 145.2 | 172.5 | 299.9 | 951.3 ⚠️ |
-| Max (ms) | 55.5 | 222.3 | 304.1 | 343.8 | 1593 ⚠️ |
-| "Exceeded session limit" occurrences | 0 | 1 | 1 | 2 | 3 |
+| Metric | quarkus3-virtual (96m) | quarkus3-virtual (64m) | quarkus3-native | go-orm | rust-orm | spring4-virtual |
+|---|---|---|---|---|---|---|
+| Throughput avg (req/s) | 1999.4 | 1999.1 | 2001.9 | 1997.8 | 1975.0 | 1347.2 ⚠️ |
+| RSS under load avg (MB) | 302.2 | 264.2 | 149.5 | 52.8 | 29.5 | 353.2 |
+| Density (req/s per MB) | 6.62 | 7.58 | 13.39 | 37.85 | 66.85 | 3.82 |
+| Mean latency (ms) | 2.22 | 4.52 | 5.66 | 21.19 | 21.35 | 177.6 ⚠️ |
+| p50 (ms) | 1.87 | 1.96 | 2.72 | 15.14 | 4.96 | 153.5 ⚠️ |
+| p99 (ms) | 8.65 | 66.2 | 74.4 | 103.8 | 243.1 | 589.3 ⚠️ |
+| p99.9 (ms) | 30.9 | 131.0 | 145.2 | 172.5 | 299.9 | 951.3 ⚠️ |
+| Max (ms) | 55.5 | 153.1 | 222.3 | 304.1 | 343.8 | 1593 ⚠️ |
+| "Exceeded session limit" occurrences | 0 | 1 | 1 | 1 | 2 | 3 |
 
 spring4-virtual is the clear outlier: throughput collapses across its own three iterations
 (1829 → 1331 → 881 req/s) with a matching latency blowup, at the same `CONNECTIONS=300`
-value the other four runtimes hold steady at — a reproducible instability under the
-open-loop model, not a one-off fluke.
+value the other runtimes hold steady at — a reproducible instability under the open-loop
+model, not a one-off fluke.
+
+quarkus3-virtual at 64m versus 96m shows the same throughput (both hit the 2000 req/s
+target) and a lower RSS, hence better density — but one of its three iterations trips
+"Exceeded session limit" and drags mean/p99/p99.9/max latency several times higher, a
+GC-driven tail-latency spike the closed-loop density chart above cannot see: it would show
+up there only as slightly reduced throughput, not as an outright latency spike.
 
 ### 1 core
 
@@ -315,6 +321,7 @@ open-loop model, not a one-off fluke.
 | [`20260814_0855__rust-orm__default_3it.json`](20260814_0855__rust-orm__default_3it.json) | 2026-08-14T08:55:19Z | rust-orm | 3 | no ceiling | tuned |
 | [`20260814_0927__rust-orm__default_3it.json`](20260814_0927__rust-orm__default_3it.json) | 2026-08-14T09:27:58Z | rust-orm | 3 | no ceiling | tuned |
 | [`20260814_1013__5runtimes__Xmx96m-ParallelGC_UnlockExperimentalVMOptions_XX:TrimNativeHeapInterval=5000_3it.json`](20260814_1013__5runtimes__Xmx96m-ParallelGC_UnlockExperimentalVMOptions_XX:TrimNativeHeapInterval=5000_3it.json) | 2026-08-14T10:13:27Z | go-orm, quarkus3-native, quarkus3-virtual, rust-orm, spring4-virtual | 3 | `-Xmx96m` `-XX:+UseParallelGC -XX:+UnlockExperimentalVMOptions -XX:TrimNativeHeapInterval=5000` | tuned |
+| [`20260814_1158__quarkus3-virtual__Xmx64m-ParallelGC_UnlockExperimentalVMOptions_XX:TrimNativeHeapInterval=5000_3it.json`](20260814_1158__quarkus3-virtual__Xmx64m-ParallelGC_UnlockExperimentalVMOptions_XX:TrimNativeHeapInterval=5000_3it.json) | 2026-08-14T11:58:08Z | quarkus3-virtual | 3 | `-Xmx64m` `-XX:+UseParallelGC -XX:+UnlockExperimentalVMOptions -XX:TrimNativeHeapInterval=5000` | tuned |
 <!-- runs -->
 
 ## Results
@@ -394,6 +401,7 @@ One row per runtime, averaged over the run's iterations.
 | `20260814_1013` | quarkus3-virtual | 2 | 96m | 13.0 | - | - | 302.2 | 1 999 | 7.00 | open |
 | `20260814_1013` | rust-orm | 2 | - | 182.7 | - | - | 29.5 | 1 975 | 79.89 | open |
 | `20260814_1013` | spring4-virtual | 2 | 96m | 5.6 | - | - | 353.2 | 1 347 | 5.23 | open |
+| `20260814_1158` | quarkus3-virtual | 2 | 64m | 12.1 | - | - | 264.2 | 1 999 | 7.75 | open |
 <!-- results -->
 
 ### Column provenance
