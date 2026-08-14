@@ -1,0 +1,157 @@
+# =============================================================================
+# Hyperfoil Load Test Configuration - open-loop variant
+# =============================================================================
+#
+# Same scenario as load-test-fixed-threads-read-all.hf.yml (warmup, cooldown, then the main
+# load test phase against the read-all endpoint), but the loadTest phase generates load with
+# Hyperfoil's open-loop constantRate model instead of the closed-loop always model. The
+# warmup phase stays closed-loop (always) on purpose - see below.
+#
+# Closed-loop (always: users) vs open-loop (constantRate: usersPerSec) is not a "more
+# accurate" swap for the same measurement - it answers a different question:
+#
+#   - always / users (warmup phase here, and the whole scenario in
+#     load-test-fixed-threads-read-all.hf.yml): N sessions loop continuously, each firing its
+#     next request as soon as the previous one's response comes back. Throughput is
+#     self-throttling - it can never exceed what N concurrent clients demand, no matter how
+#     slow the server is. This finds the server's maximum sustainable throughput at a given
+#     concurrency - "how much can N concurrent clients push through this server?" It's what
+#     every density figure in results/README.md measures.
+#
+#   - constantRate / usersPerSec (loadTest phase here): new sessions start at a fixed rate,
+#     independent of how fast the server responds. This measures the latency an
+#     independently-arriving request stream actually experiences at that rate - including
+#     during a slowdown. It's the model that avoids Coordinated Omission: a closed-loop
+#     generator backs off exactly when the server struggles (e.g. mid GC pause), so the
+#     requests that would have arrived during that stall are never generated and never show up
+#     as slow. constantRate keeps generating at TARGET_RATE regardless, so a real slowdown
+#     shows up as rising latency/queueing instead of being silently absorbed.
+#
+# Why warmup stays closed-loop: a cold JVM's very first real requests can take seconds (lazy
+# DB pool initialisation, class loading on the request path), not milliseconds. An open-loop
+# generator has no self-throttling - at any fixed target rate, that alone is enough to pile up
+# far more in-flight sessions than the pool/session cap allows within the first second,
+# failing the phase before the JVM ever gets a chance to warm up (confirmed empirically: a
+# rampPerSec warmup, even ramping from as low as 10 req/s, still failed on session-limit
+# exhaustion). The closed-loop warmup sidesteps this entirely - it never demands more than
+# WARMUP_CONNECTIONS concurrent requests regardless of response time - and gets the JVM
+# properly JIT-warm before the open-loop loadTest phase, which is where the actual open-loop
+# measurement of interest happens, starts.
+#
+# WARMUP_CONNECTIONS is deliberately a separate parameter from CONNECTIONS, not reused: the
+# closed-loop warmup tries to open all of its connections immediately and concurrently, before
+# the server has necessarily finished starting (Spring's application context refresh in
+# particular can still be settling). A high CONNECTIONS chosen to give loadTest enough
+# maxSessions headroom (see below) is a connection-storm the still-initialising server may not
+# accept fast enough, timing out enough of them to trip Hyperfoil's own error-rate SLA and
+# fail the whole run - a different failure mode from exceeding the session limit. Keeping
+# WARMUP_CONNECTIONS low avoids that regardless of how high CONNECTIONS needs to go.
+#
+# Use this file to answer "what does latency look like at a realistic, fixed request rate"
+# rather than "what's the throughput ceiling".
+#
+# Configurable Parameters:
+# ----------------------------------
+# PROTOCOL               - HTTP protocol to use (default: http)
+#                           Options: http, https
+# HOST                   - Target server hostname (default: localhost)
+# PORT                   - Target server port (default: 8080)
+# CONNECTIONS            - Size of the shared HTTP connection pool, and the max concurrent
+#                           sessions in flight during loadTest (maxSessions) (default: 300)
+#                           This is a safety cap, not a target: with the open-loop model, the
+#                           actual concurrency during loadTest is whatever TARGET_RATE and the
+#                           server's response time produce. Hyperfoil fails the phase outright
+#                           if this is exceeded, rather than letting sessions queue without
+#                           bound - raise it if loadTest fails with "Exceeded session limit".
+# WARMUP_CONNECTIONS     - Number of concurrent connections during the closed-loop warmup
+#                           phase (default: 100). Kept separate from CONNECTIONS - see the note
+#                           above on why a high CONNECTIONS is the wrong value to also use here.
+# TARGET_RATE            - Requests per second to generate during loadTest (usersPerSec),
+#                           independent of how fast the server responds (default: 2000)
+# HIDE_WARMUP_PHASE      - Hide the warmup phase details (default: false)
+# PATH                   - HTTP endpoint path to test (default: /fruits)
+# WARMUP_DURATION        - Duration of the warmup phase (default: 2m)
+# WARMUP_MAX_DURATION    - Maximum duration of the warmup phase (default: 4m)
+# WARMUP_PAUSE_DURATION  - Duration of the pause between warmup and main load test (default: 30s)
+# WARMUP_REQUEST_TIMEOUT - Timeout for warmup requests (default: 2m)
+# LOAD_REQUEST_TIMEOUT   - Timeout for main load test requests (default: 30s)
+# LOAD_DURATION          - Duration of the main load test phase (default: 30s)
+# LOAD_MAX_DURATION      - Maximum duration of the main load test phase (default: 1m)
+# THREADS                - Number of threads to use (default: 2)
+#
+# Usage:
+# ------
+# Override parameters using: -P PARAM_NAME=value
+# Example: jbang run@hyperfoil -PTARGET_RATE=5000 load-test-constant-rate-read-all.hf.yml
+#
+# =============================================================================
+
+name: load-test-constant-rate-read-all
+threads: !param THREADS 2
+http:
+  - protocol: !param PROTOCOL http
+    host: !param HOST localhost
+    port: !param PORT 8080
+    sharedConnections: !param CONNECTIONS 300
+    allowHttp2: false
+    useHttpCache: false
+ergonomics:
+  repeatCookies: false
+  userAgentFromSession: false
+
+phases:
+  - warmup:
+      always:
+        users: !param WARMUP_CONNECTIONS 100
+        duration: !param WARMUP_DURATION 2m
+        maxDuration: !param WARMUP_MAX_DURATION 4m
+        isWarmup: !param HIDE_WARMUP_PHASE false
+        scenario:
+          maxRequests: 1
+          maxSequences: 1
+          orderedSequences:
+            - getAllFruits:
+                - httpRequest:
+                      GET: !param PATH /fruits
+                      timeout: !param WARMUP_REQUEST_TIMEOUT 2m
+                      headers:
+                        accept: application/json
+
+  - cooldown:
+      noop:
+        startAfter: warmup
+        duration: !param WARMUP_PAUSE_DURATION 30s
+
+  - logStart:
+      atOnce:
+        users: 1
+        startAfterStrict:
+          - warmup
+          - cooldown
+        scenario:
+          maxRequests: 1
+          maxSequences: 1
+          orderedSequences:
+            - log:
+                - timestamp:
+                    toVar: now
+                    pattern: "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
+                - log: "loadTest started at ${now}"
+
+  - loadTest:
+      constantRate:
+        usersPerSec: !param TARGET_RATE 2000
+        maxSessions: !param CONNECTIONS 300
+        duration: !param LOAD_DURATION 30s
+        maxDuration: !param LOAD_MAX_DURATION 1m
+        startAfterStrict: logStart
+        scenario:
+          maxRequests: 1
+          maxSequences: 1
+          orderedSequences:
+            - getAllFruits:
+                - httpRequest:
+                      GET: !param PATH /fruits
+                      timeout: !param LOAD_REQUEST_TIMEOUT 30s
+                      headers:
+                        accept: application/json

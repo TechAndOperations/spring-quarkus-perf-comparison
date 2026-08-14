@@ -83,6 +83,21 @@ help() {
   echo "                                                              NOTE: nodejs-orm, nodejs-sql, rust-orm, rust-sql, go-sql and go-orm are opt-in only - they are not part of the default runtimes"
   echo "                                                              Default: 'quarkus3-jvm,quarkus3-leyden,quarkus3-virtual,quarkus3-virtual-leyden,quarkus3-native,spring3-jvm,spring3-leyden,spring3-jvm-aot,spring3-virtual,spring3-virtual-leyden,spring3-native,spring4-jvm,spring4-leyden,spring4-virtual,spring4-virtual-leyden,spring4-jvm-aot,spring4-native'"
   echo "  --run-identifier <RUN_IDENTIFIER>                       An optional identifier for this run to be added to the run output"
+  echo "  --load-model <LOAD_MODEL>                               The Hyperfoil load generation model"
+  echo "                                                              Accepted values: closed, open"
+  echo "                                                              'closed' (always: users) - N sessions loop continuously, each firing"
+  echo "                                                                its next request as soon as the previous response arrives. Finds"
+  echo "                                                                the server's maximum sustainable throughput - what every density"
+  echo "                                                                figure in results/README.md measures."
+  echo "                                                              'open' (constantRate: usersPerSec) - new sessions start at a fixed"
+  echo "                                                                rate (see --target-rate), independent of server response time."
+  echo "                                                                Measures the latency a real, independently-arriving request"
+  echo "                                                                stream experiences at that rate, including during a slowdown -"
+  echo "                                                                avoids Coordinated Omission, which 'closed' is prone to."
+  echo "                                                              Default: ${LOAD_MODEL}"
+  echo "  --target-rate <TARGET_RATE>                             Requests/sec generated when --load-model=open (Hyperfoil's usersPerSec)"
+  echo "                                                              Ignored when --load-model=closed"
+  echo "                                                              Default: ${TARGET_RATE}"
   echo "  --scenario <SCENARIO>                                   The scenario to run"
   echo "                                                              Accepted values: tuned, ootb"
   echo "                                                              Default: Depends on the value of --repo-branch"
@@ -163,6 +178,8 @@ print_values() {
   echo "  TESTS_TO_RUN: ${TESTS_TO_RUN[@]}"
   echo "  USER: $USER"
   echo "  JVM_MEMORY: $JVM_MEMORY"
+  echo "  LOAD_MODEL: $LOAD_MODEL"
+  echo "  TARGET_RATE: $TARGET_RATE"
   echo "  WAIT_TIME: $WAIT_TIME"
   echo "  SCM_REPO_URL: $SCM_REPO_URL"
   echo "  SCM_REPO_BRANCH: $SCM_REPO_BRANCH"
@@ -291,6 +308,8 @@ ${JBANG_CMD} io.hyperfoil.tools:qDup:0.11.2 \
     -S config.springboot3.version=${SPRING_BOOT3_VERSION} \
     -S config.springboot4.version=${SPRING_BOOT4_VERSION} \
     -S config.jvm.memory="${JVM_MEMORY}" \
+    -S config.load.model=${LOAD_MODEL} \
+    -S config.load.target_rate=${TARGET_RATE} \
     -S config.quarkus.build_config_args="${QUARKUS_BUILD_CONFIG_ARGS}" \
     -S config.quarkus.version=${QUARKUS_VERSION} \
     -S config.springboot3.native_build_options="${NATIVE_SPRING3_BUILD_OPTIONS}" \
@@ -354,6 +373,8 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   TESTS_TO_RUN=${DEFAULT_TESTS_TO_RUN[@]}
   USER=""
   JVM_MEMORY="-Xms512m -Xmx512m"
+  LOAD_MODEL="closed"
+  TARGET_RATE="2000"
   WAIT_TIME="20"
   DROP_OS_FILESYSTEM_CACHES=false
   USE_CONTAINER_HOST_NETWORK=false
@@ -541,6 +562,21 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
 
       --jvm-memory)
         JVM_MEMORY="$2"
+        shift 2
+        ;;
+
+      --load-model)
+        if [[ "$2" =~ ^(closed|open)$ ]]; then
+          LOAD_MODEL="$2"
+        else
+          echo "!! [ERROR] --load-model option must be one of (closed, open)!!"
+          exit_abnormal
+        fi
+        shift 2
+        ;;
+
+      --target-rate)
+        TARGET_RATE="$2"
         shift 2
         ;;
 
