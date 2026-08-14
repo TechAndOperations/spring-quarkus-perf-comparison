@@ -162,8 +162,6 @@ The script names the file after the run itself — start timestamp, runtimes mea
 configuration and iteration count — then fills in the two tables below. It rejects aborted
 runs (empty `results` section) and won't duplicate an already-archived run.
 
-## Charts
-
 Regenerated from the archived JSON files — rerun after every `archive.py`:
 
 ```sh
@@ -181,9 +179,9 @@ three categorical slots the "all pairs" validation allows, hence this composite 
 Only the **ORM** path is plotted; the `-sql` variants answer a different question and stay
 in the table.
 
-### 2 cores
+## 2 cores
 
-#### Throughput density
+### Throughput density
 
 ![Throughput density, 2 cores](density-ranking-2c.svg)
 
@@ -191,14 +189,14 @@ A dot plot on a logarithmic axis, not bars: density spans a factor of 62, and si
 length *is* its magnitude, a log axis would misrepresent every ratio. A dot encodes by
 position, which the log scale represents honestly.
 
-#### Startup cost
+### Startup cost
 
 ![Startup cost, 2 cores](startup-cost-2c.svg)
 
 The two costs paid before serving anything at all, crossed on a scatter rather than laid out
 as two series — different units on the same chart would force a dual axis.
 
-#### Peak throughput
+### Peak throughput
 
 ![Peak throughput, 2 cores](throughput-ranking-2c.svg)
 
@@ -206,7 +204,7 @@ Each runtime appears only once, at its best rung — and **it's not the same run
 the measure**: raw throughput peaks at `-Xmx` 512 or 384 MiB, density at 128 MiB. The
 ranking partially flips as a result, with Rust first on density and fifth on throughput.
 
-#### Build performance
+### Build performance
 
 Average build time per runtime, across every archived 2-core run regardless of `-Xmx`
 (build time doesn't depend on the heap ceiling, so splitting by rung would only
@@ -225,7 +223,7 @@ takes measurably longer, as seen in the 1-core section below.
 | spring4-native | 8 | 519.7 |
 <!-- build-times:end -->
 
-#### Constant rate (open-loop)
+### Constant rate (open-loop)
 
 Every measure above uses Hyperfoil's closed-loop `always` model: a fixed number of
 concurrent users loop as fast as the server allows, which is what finds a server's maximum
@@ -276,17 +274,17 @@ target) and a lower RSS, hence better density — but one of its three iteration
 GC-driven tail-latency spike the closed-loop density chart above cannot see: it would show
 up there only as slightly reduced throughput, not as an outright latency spike.
 
-### 1 core
+## 1 core
 
-#### Throughput density
+### Throughput density
 
 ![Throughput density, 1 core](density-ranking-1c.svg)
 
-#### Startup cost
+### Startup cost
 
 ![Startup cost, 1 core](startup-cost-1c.svg)
 
-#### Peak throughput
+### Peak throughput
 
 ![Peak throughput, 1 core](throughput-ranking-1c.svg)
 
