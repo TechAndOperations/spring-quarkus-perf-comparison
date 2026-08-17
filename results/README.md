@@ -186,6 +186,12 @@ Open-loop `constantRate` scenario (2000 req/s target), with `MALLOC_ARENA_MAX=2`
 exported before launch. RSS and CPU here come from `pidstat -u -w -t -r`, sampled every
 second and averaged over the load-test window only (warmup and cooldown excluded).
 
+![Density, CPU and latency spread, 2 cores](density-small-multiples.svg)
+
+Three panels, one per measure, ranked by density: density (log), CPU, and latency as a
+p50→p99 range per runtime. nodejs-orm's density and CPU are both adjusted for its lower
+target rate — see the `*` note on the table below for why.
+
 ```
 MALLOC_ARENA_MAX=2 ./run-benchmarks.sh \
   --host LOCAL \
