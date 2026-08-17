@@ -91,10 +91,6 @@ def build(cores):
             f'<text x="{cx:.1f}" y="{M["t"] + PH + 36:.0f}" fill="{ink2}" font-size="10.5" '
             f'text-anchor="middle">{note}</text>'
         )
-        o.append(
-            f'<text x="{cx:.1f}" y="{M["t"] + PH + 50:.0f}" fill="{ink2}" font-size="10.5" '
-            f'text-anchor="middle">{rss:.0f} MiB · {dens:.1f} tps/MiB</text>'
-        )
 
     o.append(
         f'<text transform="translate(18,{M["t"] + PH / 2:.0f}) rotate(-90)" fill="{ink2}" '

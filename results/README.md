@@ -180,7 +180,7 @@ in the table.
 
 ## 2 cores
 
-### Peak throughput
+### Peak throughput (closed loop)
 
 ![Peak throughput, 2 cores](throughput-ranking-2c.svg)
 
