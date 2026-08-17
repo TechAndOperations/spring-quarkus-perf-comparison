@@ -18,13 +18,12 @@ to nodejs-orm; the p50-p99 range spans a comparable spread). CPU stays linear - 
 a factor of ~4 across runtimes, not enough to need it, and log would flatten the
 difference the column exists to show.
 
-Like density-cpu-scatter.py, this is NOT derived from the archived metrics.json files
-via _chartlib.load(): the "Density (open loop)" table is a hand-assembled, one-off
-sweep, so its six rows are transcribed here directly from that table. nodejs-orm was
-measured at a --target-rate of 500 req/s instead of the other rows' 2000, so its
-density and CPU are adjusted (/4 and x4) before plotting to put it back on the same
-footing; its latency is plotted as measured, since latency does not scale with
-target rate the way a throughput-derived measure does.
+This is NOT derived from the archived metrics.json files via _chartlib.load(): the
+"Density (open loop)" table is a hand-assembled, one-off sweep, so its six rows are
+transcribed here directly from that table. nodejs-orm was measured at a --target-rate
+of 500 req/s instead of the other rows' 2000, so its CPU is adjusted (x4) before
+plotting to put it back on the same footing; density and latency are plotted as
+measured, since neither scales with target rate the way CPU load does.
 """
 
 import math
@@ -39,7 +38,7 @@ GAP = 40
 ROW_H = 46
 PANEL_W = (W - M["l"] - M["r"] - 2 * GAP) / 3
 
-# runtime -> (density adj., CPU adj. %, p50 ms, p99 ms, note)
+# runtime -> (density, CPU adj. %, p50 ms, p99 ms, note)
 # Transcribed from the "Density (open loop)" table in README.md, same order (density
 # descending) the table itself uses.
 ROWS = [
@@ -48,13 +47,13 @@ ROWS = [
     ("quarkus3-native", 13.65, 133.6, 2.50, 21.23, "-Xmx 64m"),
     ("quarkus3-virtual", 8.39, 92.8, 1.79, 7.17, "-Xmx 48m"),
     ("spring4-virtual", 4.89, 113.0, 1.98, 14.33, "-Xmx 128m"),
-    # Measured at --target-rate 500 (vs. 2000 for the others): density / 4, CPU x 4.
-    # p50/p99 are plotted as measured - latency does not scale with target rate.
-    ("nodejs-orm", 0.58, 352.8, 3.66, 249.91, "target-rate 500, density/CPU adjusted"),
+    # Measured at --target-rate 500 (vs. 2000 for the others): CPU x 4. Density and
+    # p50/p99 are plotted as measured - neither scales with target rate.
+    ("nodejs-orm", 2.32, 352.8, 3.66, 249.91, "target-rate 500, CPU adjusted"),
 ]
 
 PANELS = (
-    ("Density, adjusted (req/s/MB)", "log", [r[1] for r in ROWS]),
+    ("Density (req/s/MB)", "log", [r[1] for r in ROWS]),
     ("CPU, adjusted (%)", "linear", [r[2] for r in ROWS]),
     ("Latency, p50→p99 (ms)", "log", [v for r in ROWS for v in (r[3], r[4])]),
 )
