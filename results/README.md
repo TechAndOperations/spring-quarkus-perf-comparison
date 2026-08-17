@@ -180,6 +180,14 @@ in the table.
 
 ## 2 cores
 
+### Peak throughput
+
+![Peak throughput, 2 cores](throughput-ranking-2c.svg)
+
+Each runtime appears only once, at its best rung — and **it's not the same rung depending on
+the measure**: raw throughput peaks at `-Xmx` 512 or 384 MiB, density at 128 MiB. The
+ranking partially flips as a result, with Rust first on density and fifth on throughput.
+
 ### Density (open loop)
 
 Open-loop `constantRate` scenario (2000 req/s target), with `MALLOC_ARENA_MAX=2`
@@ -227,14 +235,6 @@ roughly account for the 4x lower target rate before ranking it alongside the oth
 
 The two costs paid before serving anything at all, crossed on a scatter rather than laid out
 as two series — different units on the same chart would force a dual axis.
-
-### Peak throughput
-
-![Peak throughput, 2 cores](throughput-ranking-2c.svg)
-
-Each runtime appears only once, at its best rung — and **it's not the same rung depending on
-the measure**: raw throughput peaks at `-Xmx` 512 or 384 MiB, density at 128 MiB. The
-ranking partially flips as a result, with Rust first on density and fifth on throughput.
 
 ### Build performance
 
