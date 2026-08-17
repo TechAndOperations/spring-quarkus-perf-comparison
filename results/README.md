@@ -165,7 +165,6 @@ runs (empty `results` section) and won't duplicate an already-archived run.
 Regenerated from the archived JSON files — rerun after every `archive.py`:
 
 ```sh
-./density-ranking.py       # dots: each runtime's peak density
 ./startup-cost.py          # scatter: TTFR × RSS after the 1st request
 ./throughput-ranking.py    # bars: each runtime's peak throughput
 ```
@@ -173,7 +172,7 @@ Regenerated from the archived JSON files — rerun after every `archive.py`:
 Each script produces **one set per core count** found in the archive, suffixed `-2c` or
 `-1c`. Runs at different core counts aren't comparable, so they don't share a chart.
 
-All three share `_chartlib.py` — loading, scales, marks, palette. Colour carries the family
+Both share `_chartlib.py` — loading, scales, marks, palette. Colour carries the family
 (Quarkus, Spring, non-JVM) and shape carries the execution mode: seven runtimes exceed the
 three categorical slots the "all pairs" validation allows, hence this composite encoding.
 Only the **ORM** path is plotted; the `-sql` variants answer a different question and stay
@@ -181,13 +180,40 @@ in the table.
 
 ## 2 cores
 
-### Throughput density
+### Density (open loop)
 
-![Throughput density, 2 cores](density-ranking-2c.svg)
+Open-loop `constantRate` scenario (2000 req/s target), with `MALLOC_ARENA_MAX=2`
+exported before launch. RSS and CPU here come from `pidstat -u -w -t -r`, sampled every
+second and averaged over the load-test window only (warmup and cooldown excluded).
 
-A dot plot on a logarithmic axis, not bars: density spans a factor of 62, and since a bar's
-length *is* its magnitude, a log axis would misrepresent every ratio. A dot encodes by
-position, which the log scale represents honestly.
+```
+MALLOC_ARENA_MAX=2 ./run-benchmarks.sh \
+  --host LOCAL \
+  --springboot4-version 4.1.0 --quarkus-version 3.38.1 --java-version 25.0.3-tem \
+  --cpus-app 0-1 --cpus-db 4-6 --cpus-first-request 10 --cpus-load-gen 10,11,2 --cpus-monitoring 3 --cpus-otel 7-9 \
+  --tests run-load-test \
+  --repo-url /home/sevel/projects/spring-quarkus-perf-comparison \
+  --jvm-args '-XX:+UseParallelGC -XX:+UnlockExperimentalVMOptions -XX:TrimNativeHeapInterval=5000' \
+  --iterations 3 \
+  --runtimes 'XX,XX' \
+  --jvm-memory '-XmxXXm' \
+  --target-rate XX \
+  --load-model open
+```
+
+| Runtime | Xmx | Throughput avg (req/s) | RSS avg (MB) | Density (req/s per MB) | CPU avg (%) | Mean latency (ms) | p50 (ms) | p90 (ms) | p99 (ms) | p99.9 (ms) | p99.99 (ms) | Max (ms) | "Exceeded session limit" occurrences |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| rust-orm | — | 1997.8 | 25.7 | 77.74 | 94.7 | 15.12 | 4.98 | 50.90 | 111.28 | 163.58 | 169.69 | 173.71 | 1 |
+| go-orm | — | 2002.2 | 51.6 | 38.80 | 118.7 | 18.98 | 13.70 | 39.41 | 87.47 | 167.95 | 254.46 | 310.03 | 0 |
+| quarkus3-native | 64m | 2005.9 | 146.9 | 13.65 | 133.6 | 3.50 | 2.50 | 5.34 | 21.23 | 46.75 | 64.31 | 73.66 | 0 |
+| quarkus3-virtual | 48m | 2004.9 | 239.0 | 8.39 | 92.8 | 2.11 | 1.79 | 2.91 | 7.17 | 25.41 | 34.15 | 39.85 | 0 |
+| spring4-virtual | 128m | 1994.1 | 407.8 | 4.89 | 113.0 | 2.73 | 1.98 | 3.59 | 14.33 | 76.94 | 113.42 | 124.69 | 0 |
+| nodejs-orm | — | 495.7 | 214.1 | 0.58* | 88.2 | 15.08 | 3.66 | 15.25 | 249.91 | 284.51 | 329.25 | 331.35 | 0 |
+
+\* Run at `--target-rate 500` instead of the usual 2000 - throughput here is capped by the
+target rate, not by the app's actual ceiling, so it isn't a maximum-sustainable-throughput
+measurement like the other rows. The raw density (throughput/RSS) is divided by 4 to
+roughly account for the 4x lower target rate before ranking it alongside the other rows.
 
 ### Startup cost
 
@@ -209,7 +235,7 @@ ranking partially flips as a result, with Rust first on density and fifth on thr
 Average build time per runtime, across every archived 2-core run regardless of `-Xmx`
 (build time doesn't depend on the heap ceiling, so splitting by rung would only
 fragment the same measurement). 1-core runs are excluded — a build pinned to one core
-takes measurably longer, as seen in the 1-core section below.
+takes measurably longer.
 
 <!-- build-times:start -->
 | Runtime | Runs averaged | Avg build (s) |
@@ -222,166 +248,6 @@ takes measurably longer, as seen in the 1-core section below.
 | quarkus3-native | 10 | 314.4 |
 | spring4-native | 8 | 519.7 |
 <!-- build-times:end -->
-
-### Constant rate (open-loop)
-
-Every measure above uses Hyperfoil's closed-loop `always` model: a fixed number of
-concurrent users loop as fast as the server allows, which is what finds a server's maximum
-sustainable throughput but self-throttles the moment the server slows down — a slowdown
-never shows up as added latency, only as reduced throughput. This run instead applies
-Hyperfoil's open-loop `constantRate` model, which generates requests at a fixed rate
-regardless of how fast the server responds, so a real slowdown shows up as rising latency
-and queueing instead of being silently absorbed.
-
-The scenario has three phases:
-
-- **Warmup** — closed-loop (`always`), 100 concurrent connections hitting `GET /fruits` for
-  up to 2 minutes. Kept closed-loop deliberately: an open-loop generator has no
-  self-throttling, so it would blow through the session limit within the first second
-  against a server whose very first real requests can take seconds (lazy DB pool init,
-  class loading) — the closed-loop warmup gets the JVM JIT-warm without that risk.
-- **Cooldown** — a 30-second pause (`noop`) between warmup and the load test.
-- **Load test** — open-loop (`constantRate`), generating requests at a fixed rate of 2000
-  req/s for 30 seconds, with a safety cap of 300 concurrent in-flight sessions
-  (`maxSessions`) — Hyperfoil fails the phase if that cap is exceeded rather than letting
-  sessions queue without bound.
-
-The five runtimes benchmarked here — quarkus3-virtual, quarkus3-native, spring4-virtual,
-go-orm and rust-orm — were selected because the throughput-density test above showed each
-of them able to sustain at least 2000 req/s; testing at a target rate a server can't even
-reach under ideal closed-loop conditions wouldn't measure anything meaningful.
-
-| Metric | quarkus3-virtual (96m) | quarkus3-virtual (64m) | quarkus3-native (96m) | go-orm | rust-orm | spring4-virtual (96m) |
-|---|---|---|---|---|---|---|
-| Throughput avg (req/s) | 1999.4 | 1999.1 | 2001.9 | 1997.8 | 1975.0 | 1347.2 ⚠️ |
-| RSS under load avg (MB) | 302.2 | 264.2 | 149.5 | 52.8 | 29.5 | 353.2 |
-| Density (req/s per MB) | 6.62 | 7.58 | 13.39 | 37.85 | 66.85 | 3.82 |
-| Mean latency (ms) | 2.22 | 4.52 | 5.66 | 21.19 | 21.35 | 177.6 ⚠️ |
-| p50 (ms) | 1.87 | 1.96 | 2.72 | 15.14 | 4.96 | 153.5 ⚠️ |
-| p99 (ms) | 8.65 | 66.2 | 74.4 | 103.8 | 243.1 | 589.3 ⚠️ |
-| p99.9 (ms) | 30.9 | 131.0 | 145.2 | 172.5 | 299.9 | 951.3 ⚠️ |
-| Max (ms) | 55.5 | 153.1 | 222.3 | 304.1 | 343.8 | 1593 ⚠️ |
-| "Exceeded session limit" occurrences | 0 | 1 | 1 | 1 | 2 | 3 |
-
-spring4-virtual is the clear outlier: throughput collapses across its own three iterations
-(1829 → 1331 → 881 req/s) with a matching latency blowup, at the same `CONNECTIONS=300`
-value the other runtimes hold steady at — a reproducible instability under the open-loop
-model, not a one-off fluke.
-
-quarkus3-virtual at 64m versus 96m shows the same throughput (both hit the 2000 req/s
-target) and a lower RSS, hence better density — but one of its three iterations trips
-"Exceeded session limit" and drags mean/p99/p99.9/max latency several times higher, a
-GC-driven tail-latency spike the closed-loop density chart above cannot see: it would show
-up there only as slightly reduced throughput, not as an outright latency spike.
-
-### Assessing heap
-
-Same open-loop `constantRate` scenario as above (2000 req/s target), run repeatedly at
-shrinking `-Xmx` values to find where percentiles start degrading — one memory level at a
-time, each averaged over 3 iterations, until a change in the percentiles shows up.
-
-#### quarkus3-virtual
-
-| Memory | Throughput avg (req/s) | RSS avg (MB) | Density (req/s per MB) | Mean latency (ms) | p50 (ms) | p90 (ms) | p99 (ms) | p99.9 (ms) | p99.99 (ms) | Max (ms) | "Exceeded session limit" occurrences |
-|---|---|---|---|---|---|---|---|---|---|---|---|
-| 256m | 2004.3 | 398.0 | 5.04 | 1.87 | 1.69 | 2.43 | 5.40 | 11.21 | 17.63 | 27.13 | 0 |
-| 128m | 2001.7 | 328.9 | 6.09 | 2.37 | 1.72 | 2.75 | 16.40 | 60.21 | 83.89 | 92.27 | 0 |
-| 96m | 2001.7 | 294.6 | 6.81 | 2.42 | 1.76 | 2.75 | 20.45 | 85.99 | 108.35 | 126.88 | 0 |
-| 64m | 1998.5 | 260.4 | 7.67 | 2.02 | 1.71 | 2.58 | 6.29 | 50.51 | 76.37 | 81.44 | 0 |
-| 48m | 2002.0 | 246.2 | 8.14 | 2.41 | 1.87 | 3.34 | 12.44 | 35.81 | 46.88 | 52.95 | 0 |
-| 32m | 25.8 ⚠️ | 224.2 | 0.12 ⚠️ | 7076 ⚠️ | 6395 ⚠️ | 17236 ⚠️ | 18321 ⚠️ | 27515 ⚠️ | 27559 ⚠️ | 27559 ⚠️ | 0 |
-
-At 256m, throughput/RSS/p50/mean are stable across the 3 iterations. The tail
-(p99/p99.9/p99.99) is noisy — 4.95–6.19 ms / 9.04–13.57 ms / 13.70–22.28 ms across the
-three runs — consistent with the GC-driven tail-latency variance already seen at 96m/64m
-above, not a sign of memory pressure at this level.
-
-At 128m, throughput/RSS/p50/mean stay essentially unchanged from 256m, but the tail jumps
-sharply: p99.9 runs 37.5–73.9 ms and p99.99 runs 70.8–91.8 ms across the three iterations —
-roughly 4-6x the 256m tail, with no "Exceeded session limit" occurrence and no throughput
-loss. This is the first heap level where the percentile shift is a real signal rather than
-run-to-run noise, likely GC pause pressure building well before it shows up as reduced
-throughput.
-
-At 96m, throughput/RSS/p50/mean still hold steady, but the tail keeps climbing — p99.9
-64.5–113.2 ms and p99.99 84.9–136.3 ms — roughly 1.3-1.4x the 128m averages, a continuous
-degradation rather than a cliff. Still no "Exceeded session limit" occurrence, so the
-constraint remains GC pause time rather than session queueing.
-
-At 64m, throughput/RSS/p50/mean again hold steady, but the tail is *lower* than at 96m
-(p99.9 40.4–60.8 ms, p99.99 73.9–80.2 ms) and even below 128m's p99.9 — breaking the
-downward-with-heap trend seen so far. ⚠️ Not (yet) trusted as a real reversal: with only 3
-iterations of a 30s load phase, the p99.9/p99.99 columns have shown 2-3x run-to-run swings
-at every heap level tested, including 256m where there is no memory pressure at all — the
-96m row may simply be the unlucky outlier rather than 64m being genuinely better. Needs
-more iterations at 96m (and ideally 64m) before drawing a conclusion about where the
-percentiles actually turn.
-
-At 48m, p50/p90/mean start drifting upward for the first time (p90 3.34 ms vs 2.58–2.75 ms
-at 64–128m) and p99 climbs monotonically within the run itself (6.26 → 11.01 → 20.05 ms
-across the three iterations) rather than just bouncing around — a different kind of signal
-than the tail-only noise seen so far. p99.9/p99.99 stay within the same noisy band as the
-other levels (14.9–51.4 ms / 19.5–69.7 ms across iterations), so no conclusion there, but
-the upward creep in the body of the distribution (p50/p90/p99) is worth tracking as memory
-drops further.
-
-At 32m the app stops merely getting slower and collapses outright: throughput drops from
-~2000 to 16.5–31.4 req/s (98%+ loss), every latency percentile — including p50 — moves into
-the seconds range (mean 2.4–10.6 s, max 24.2–30.1 s), and each iteration logs hundreds of
-connection errors and request timeouts (293/292, 294/294, 4/4) plus dozens to ~150 app 5xx
-responses, none of which appeared at any heap level down to 48m. No "Exceeded session
-limit" was logged — this isn't the load generator's session cap being hit, it's the app
-itself failing to keep up, almost certainly stuck in near-continuous GC. The ms-scale
-columns above are kept for consistency but are not comparable to the 48m-256m rows: 32m is
-past the viable floor for quarkus3-virtual under this load, not a further point on the same
-degradation curve.
-
-### Density
-
-Same open-loop `constantRate` scenario (2000 req/s target), with `MALLOC_ARENA_MAX=2`
-exported before launch. RSS and CPU here come from `pidstat -u -w -t -r`, sampled every
-second and averaged over the load-test window only (warmup and cooldown excluded), rather
-than the single end-of-load `pmap` snapshot used in "Assessing heap" above.
-
-```
-export MALLOC_ARENA_MAX=2
-export OPT_VERSIONS="--springboot4-version 4.1.0 --quarkus-version 3.38.1 --java-version 25.0.3-tem"
-export OPT_CPUS="--cpus-app 0-1 --cpus-db 4-6 --cpus-first-request 10 --cpus-load-gen 10,11,2 --cpus-monitoring 3 --cpus-otel 7-9"
-export OPT_TESTS_TO_RUN="--tests run-load-test"
-export OPT_ITERATIONS="--iterations 3"
-export OPT_GIT="--repo-url /home/sevel/projects/spring-quarkus-perf-comparison"
-export OPT_RUNTIMES="--runtimes quarkus3-virtual,go-orm,rust-orm"
-
-./run-benchmarks.sh  --host LOCAL $OPT_VERSIONS $OPT_CPUS $OPT_TESTS_TO_RUN $OPT_ITERATIONS $OPT_GIT $OPT_RUNTIMES --jvm-memory "-Xmx48m" --jvm-args "-XX:+UseParallelGC -XX:+UnlockExperimentalVMOptions -XX:TrimNativeHeapInterval=5000" --load-model open
-```
-
-| Runtime | Xmx | Throughput avg (req/s) | RSS avg (MB) | Density (req/s per MB) | CPU avg (%) | Mean latency (ms) | p50 (ms) | p90 (ms) | p99 (ms) | p99.9 (ms) | p99.99 (ms) | Max (ms) | "Exceeded session limit" occurrences |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| rust-orm | — | 1997.8 | 25.7 | 77.74 | 94.7 | 15.12 | 4.98 | 50.90 | 111.28 | 163.58 | 169.69 | 173.71 | 1 |
-| go-orm | — | 2002.2 | 51.6 | 38.80 | 118.7 | 18.98 | 13.70 | 39.41 | 87.47 | 167.95 | 254.46 | 310.03 | 0 |
-| quarkus3-native | 64m | 2005.9 | 146.9 | 13.65 | 133.6 | 3.50 | 2.50 | 5.34 | 21.23 | 46.75 | 64.31 | 73.66 | 0 |
-| quarkus3-virtual | 48m | 2004.9 | 239.0 | 8.39 | 92.8 | 2.11 | 1.79 | 2.91 | 7.17 | 25.41 | 34.15 | 39.85 | 0 |
-| spring4-virtual | 128m | 1994.1 | 407.8 | 4.89 | 113.0 | 2.73 | 1.98 | 3.59 | 14.33 | 76.94 | 113.42 | 124.69 | 0 |
-| nodejs-orm | — | 495.7 | 214.1 | 0.58* | 88.2 | 15.08 | 3.66 | 15.25 | 249.91 | 284.51 | 329.25 | 331.35 | 0 |
-
-\* Run at `--target-rate 500` instead of the usual 2000 - throughput here is capped by the
-target rate, not by the app's actual ceiling, so it isn't a maximum-sustainable-throughput
-measurement like the other rows. The raw density (throughput/RSS) is divided by 4 to
-roughly account for the 4x lower target rate before ranking it alongside the other rows.
-
-## 1 core
-
-### Throughput density
-
-![Throughput density, 1 core](density-ranking-1c.svg)
-
-### Startup cost
-
-![Startup cost, 1 core](startup-cost-1c.svg)
-
-### Peak throughput
-
-![Peak throughput, 1 core](throughput-ranking-1c.svg)
 
 ## Runs
 
