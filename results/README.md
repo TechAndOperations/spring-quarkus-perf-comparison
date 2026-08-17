@@ -355,11 +355,11 @@ export OPT_RUNTIMES="--runtimes quarkus3-virtual,go-orm,rust-orm"
 ./run-benchmarks.sh  --host LOCAL $OPT_VERSIONS $OPT_CPUS $OPT_TESTS_TO_RUN $OPT_ITERATIONS $OPT_GIT $OPT_RUNTIMES --jvm-memory "-Xmx48m" --jvm-args "-XX:+UseParallelGC -XX:+UnlockExperimentalVMOptions -XX:TrimNativeHeapInterval=5000" --load-model open
 ```
 
-| Runtime | Xmx | Throughput avg (req/s) | RSS avg (MB) | CPU avg (%) | Mean latency (ms) | p50 (ms) | p90 (ms) | p99 (ms) | p99.9 (ms) | p99.99 (ms) | Max (ms) | "Exceeded session limit" occurrences |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| quarkus3-virtual | 48m | 2004.9 | 239.0 | 92.8 | 2.11 | 1.79 | 2.91 | 7.17 | 25.41 | 34.15 | 39.85 | 0 |
-| go-orm | — | 2002.2 | 51.6 | 118.7 | 18.98 | 13.70 | 39.41 | 87.47 | 167.95 | 254.46 | 310.03 | 0 |
-| rust-orm | — | 1997.8 | 25.7 | 94.7 | 15.12 | 4.98 | 50.90 | 111.28 | 163.58 | 169.69 | 173.71 | 1 |
+| Runtime | Xmx | Throughput avg (req/s) | RSS avg (MB) | Density (req/s per MB) | CPU avg (%) | Mean latency (ms) | p50 (ms) | p90 (ms) | p99 (ms) | p99.9 (ms) | p99.99 (ms) | Max (ms) | "Exceeded session limit" occurrences |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| quarkus3-virtual | 48m | 2004.9 | 239.0 | 8.39 | 92.8 | 2.11 | 1.79 | 2.91 | 7.17 | 25.41 | 34.15 | 39.85 | 0 |
+| go-orm | — | 2002.2 | 51.6 | 38.80 | 118.7 | 18.98 | 13.70 | 39.41 | 87.47 | 167.95 | 254.46 | 310.03 | 0 |
+| rust-orm | — | 1997.8 | 25.7 | 77.74 | 94.7 | 15.12 | 4.98 | 50.90 | 111.28 | 163.58 | 169.69 | 173.71 | 1 |
 
 ## 1 core
 
