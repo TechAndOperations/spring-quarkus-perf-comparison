@@ -197,8 +197,8 @@ second and averaged over the load-test window only (warmup and cooldown excluded
 ![Density, CPU and latency spread, 2 cores](density-small-multiples.svg)
 
 Three panels, one per measure, ranked by density: density (log), CPU, and latency as a
-p50→p99 range per runtime. nodejs-orm's density and CPU are both adjusted for its lower
-target rate — see the `*` note on the table below for why.
+p50→p99 range per runtime. nodejs-orm's CPU is adjusted (×4) to account for its lower
+target rate (500 vs. 2000 req/s); density is plotted as measured.
 
 ```
 MALLOC_ARENA_MAX=2 ./run-benchmarks.sh \
@@ -222,12 +222,8 @@ MALLOC_ARENA_MAX=2 ./run-benchmarks.sh \
 | quarkus3-native | 64m | 2005.9 | 146.9 | 13.65 | 133.6 | 3.50 | 2.50 | 5.34 | 21.23 | 46.75 | 64.31 | 73.66 | 0 |
 | quarkus3-virtual | 48m | 2004.9 | 239.0 | 8.39 | 92.8 | 2.11 | 1.79 | 2.91 | 7.17 | 25.41 | 34.15 | 39.85 | 0 |
 | spring4-virtual | 128m | 1994.1 | 407.8 | 4.89 | 113.0 | 2.73 | 1.98 | 3.59 | 14.33 | 76.94 | 113.42 | 124.69 | 0 |
-| nodejs-orm | — | 495.7 | 214.1 | 0.58* | 88.2 | 15.08 | 3.66 | 15.25 | 249.91 | 284.51 | 329.25 | 331.35 | 0 |
-
-\* Run at `--target-rate 500` instead of the usual 2000 - throughput here is capped by the
-target rate, not by the app's actual ceiling, so it isn't a maximum-sustainable-throughput
-measurement like the other rows. The raw density (throughput/RSS) is divided by 4 to
-roughly account for the 4x lower target rate before ranking it alongside the other rows.
+| spring4-native | 384m | 1495.9 | 357.4 | 4.19 | 168.7 | 10.67 | 5.78 | 24.38 | 69.64 | 137.36 | 227.02 | 256.20 | 0 |
+| nodejs-orm | — | 495.7 | 214.1 | 2.32 | 88.2 | 15.08 | 3.66 | 15.25 | 249.91 | 284.51 | 329.25 | 331.35 | 0 |
 
 ### Startup cost
 
