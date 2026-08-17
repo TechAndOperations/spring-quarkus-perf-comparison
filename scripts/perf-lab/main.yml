@@ -979,7 +979,7 @@ scripts:
         async: true
       with:
         name: pidstat
-        command: pidstat -u -w -t -p ${{pid}} 1
+        command: pidstat -u -w -t -r -p ${{pid}} 1
         log_file: ${{log_dir}}/pidstat-${{runtime_name}}-${{iteration}}.log
     - script:
         name: monitor-process

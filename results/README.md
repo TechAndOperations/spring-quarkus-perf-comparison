@@ -274,6 +274,93 @@ target) and a lower RSS, hence better density — but one of its three iteration
 GC-driven tail-latency spike the closed-loop density chart above cannot see: it would show
 up there only as slightly reduced throughput, not as an outright latency spike.
 
+### Assessing heap
+
+Same open-loop `constantRate` scenario as above (2000 req/s target), run repeatedly at
+shrinking `-Xmx` values to find where percentiles start degrading — one memory level at a
+time, each averaged over 3 iterations, until a change in the percentiles shows up.
+
+#### quarkus3-virtual
+
+| Memory | Throughput avg (req/s) | RSS avg (MB) | Density (req/s per MB) | Mean latency (ms) | p50 (ms) | p90 (ms) | p99 (ms) | p99.9 (ms) | p99.99 (ms) | Max (ms) | "Exceeded session limit" occurrences |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 256m | 2004.3 | 398.0 | 5.04 | 1.87 | 1.69 | 2.43 | 5.40 | 11.21 | 17.63 | 27.13 | 0 |
+| 128m | 2001.7 | 328.9 | 6.09 | 2.37 | 1.72 | 2.75 | 16.40 | 60.21 | 83.89 | 92.27 | 0 |
+| 96m | 2001.7 | 294.6 | 6.81 | 2.42 | 1.76 | 2.75 | 20.45 | 85.99 | 108.35 | 126.88 | 0 |
+| 64m | 1998.5 | 260.4 | 7.67 | 2.02 | 1.71 | 2.58 | 6.29 | 50.51 | 76.37 | 81.44 | 0 |
+| 48m | 2002.0 | 246.2 | 8.14 | 2.41 | 1.87 | 3.34 | 12.44 | 35.81 | 46.88 | 52.95 | 0 |
+| 32m | 25.8 ⚠️ | 224.2 | 0.12 ⚠️ | 7076 ⚠️ | 6395 ⚠️ | 17236 ⚠️ | 18321 ⚠️ | 27515 ⚠️ | 27559 ⚠️ | 27559 ⚠️ | 0 |
+
+At 256m, throughput/RSS/p50/mean are stable across the 3 iterations. The tail
+(p99/p99.9/p99.99) is noisy — 4.95–6.19 ms / 9.04–13.57 ms / 13.70–22.28 ms across the
+three runs — consistent with the GC-driven tail-latency variance already seen at 96m/64m
+above, not a sign of memory pressure at this level.
+
+At 128m, throughput/RSS/p50/mean stay essentially unchanged from 256m, but the tail jumps
+sharply: p99.9 runs 37.5–73.9 ms and p99.99 runs 70.8–91.8 ms across the three iterations —
+roughly 4-6x the 256m tail, with no "Exceeded session limit" occurrence and no throughput
+loss. This is the first heap level where the percentile shift is a real signal rather than
+run-to-run noise, likely GC pause pressure building well before it shows up as reduced
+throughput.
+
+At 96m, throughput/RSS/p50/mean still hold steady, but the tail keeps climbing — p99.9
+64.5–113.2 ms and p99.99 84.9–136.3 ms — roughly 1.3-1.4x the 128m averages, a continuous
+degradation rather than a cliff. Still no "Exceeded session limit" occurrence, so the
+constraint remains GC pause time rather than session queueing.
+
+At 64m, throughput/RSS/p50/mean again hold steady, but the tail is *lower* than at 96m
+(p99.9 40.4–60.8 ms, p99.99 73.9–80.2 ms) and even below 128m's p99.9 — breaking the
+downward-with-heap trend seen so far. ⚠️ Not (yet) trusted as a real reversal: with only 3
+iterations of a 30s load phase, the p99.9/p99.99 columns have shown 2-3x run-to-run swings
+at every heap level tested, including 256m where there is no memory pressure at all — the
+96m row may simply be the unlucky outlier rather than 64m being genuinely better. Needs
+more iterations at 96m (and ideally 64m) before drawing a conclusion about where the
+percentiles actually turn.
+
+At 48m, p50/p90/mean start drifting upward for the first time (p90 3.34 ms vs 2.58–2.75 ms
+at 64–128m) and p99 climbs monotonically within the run itself (6.26 → 11.01 → 20.05 ms
+across the three iterations) rather than just bouncing around — a different kind of signal
+than the tail-only noise seen so far. p99.9/p99.99 stay within the same noisy band as the
+other levels (14.9–51.4 ms / 19.5–69.7 ms across iterations), so no conclusion there, but
+the upward creep in the body of the distribution (p50/p90/p99) is worth tracking as memory
+drops further.
+
+At 32m the app stops merely getting slower and collapses outright: throughput drops from
+~2000 to 16.5–31.4 req/s (98%+ loss), every latency percentile — including p50 — moves into
+the seconds range (mean 2.4–10.6 s, max 24.2–30.1 s), and each iteration logs hundreds of
+connection errors and request timeouts (293/292, 294/294, 4/4) plus dozens to ~150 app 5xx
+responses, none of which appeared at any heap level down to 48m. No "Exceeded session
+limit" was logged — this isn't the load generator's session cap being hit, it's the app
+itself failing to keep up, almost certainly stuck in near-continuous GC. The ms-scale
+columns above are kept for consistency but are not comparable to the 48m-256m rows: 32m is
+past the viable floor for quarkus3-virtual under this load, not a further point on the same
+degradation curve.
+
+### Density
+
+Same open-loop `constantRate` scenario (2000 req/s target), with `MALLOC_ARENA_MAX=2`
+exported before launch. RSS and CPU here come from `pidstat -u -w -t -r`, sampled every
+second and averaged over the load-test window only (warmup and cooldown excluded), rather
+than the single end-of-load `pmap` snapshot used in "Assessing heap" above.
+
+```
+export MALLOC_ARENA_MAX=2
+export OPT_VERSIONS="--springboot4-version 4.1.0 --quarkus-version 3.38.1 --java-version 25.0.3-tem"
+export OPT_CPUS="--cpus-app 0-1 --cpus-db 4-6 --cpus-first-request 10 --cpus-load-gen 10,11,2 --cpus-monitoring 3 --cpus-otel 7-9"
+export OPT_TESTS_TO_RUN="--tests run-load-test"
+export OPT_ITERATIONS="--iterations 3"
+export OPT_GIT="--repo-url /home/sevel/projects/spring-quarkus-perf-comparison"
+export OPT_RUNTIMES="--runtimes quarkus3-virtual,go-orm,rust-orm"
+
+./run-benchmarks.sh  --host LOCAL $OPT_VERSIONS $OPT_CPUS $OPT_TESTS_TO_RUN $OPT_ITERATIONS $OPT_GIT $OPT_RUNTIMES --jvm-memory "-Xmx48m" --jvm-args "-XX:+UseParallelGC -XX:+UnlockExperimentalVMOptions -XX:TrimNativeHeapInterval=5000" --load-model open
+```
+
+| Runtime | Xmx | Throughput avg (req/s) | RSS avg (MB) | CPU avg (%) | Mean latency (ms) | p50 (ms) | p90 (ms) | p99 (ms) | p99.9 (ms) | p99.99 (ms) | Max (ms) | "Exceeded session limit" occurrences |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| quarkus3-virtual | 48m | 2004.9 | 239.0 | 92.8 | 2.11 | 1.79 | 2.91 | 7.17 | 25.41 | 34.15 | 39.85 | 0 |
+| go-orm | — | 2002.2 | 51.6 | 118.7 | 18.98 | 13.70 | 39.41 | 87.47 | 167.95 | 254.46 | 310.03 | 0 |
+| rust-orm | — | 1997.8 | 25.7 | 94.7 | 15.12 | 4.98 | 50.90 | 111.28 | 163.58 | 169.69 | 173.71 | 1 |
+
 ## 1 core
 
 ### Throughput density
