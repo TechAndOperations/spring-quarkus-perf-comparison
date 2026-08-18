@@ -182,6 +182,19 @@ in the table.
 
 ### Peak throughput (closed loop)
 
+```
+MALLOC_ARENA_MAX=2 ./run-benchmarks.sh \
+  --host LOCAL \
+  --springboot4-version 4.1.0 --quarkus-version 3.38.1 --java-version 25.0.3-tem \
+  --cpus-app 0-1 --cpus-db 4-6 --cpus-first-request 10 --cpus-load-gen 10,11,2 --cpus-monitoring 3 --cpus-otel 7-9 \
+  --tests run-load-test \
+  --repo-url /home/sevel/projects/spring-quarkus-perf-comparison \
+  --jvm-args '-XX:+UseParallelGC -XX:+UnlockExperimentalVMOptions -XX:TrimNativeHeapInterval=5000' \
+  --iterations 3 \
+  --runtimes 'quarkus3-virtual,quarkus3-native,spring4-virtual,spring4-native,nodejs-orm,go-orm,rust-orm' \
+  --jvm-memory '-Xmx512m' 
+```
+
 ![Peak throughput, 2 cores](throughput-ranking-2c.svg)
 
 Each runtime appears only once, at its best rung — and **it's not the same rung depending on
