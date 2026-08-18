@@ -270,13 +270,13 @@ takes measurably longer.
 <!-- build-times:start -->
 | Runtime | Runs averaged | Avg build (s) |
 |---|---|---|
-| spring4-virtual | 10 | 5.9 |
+| spring4-virtual | 4 | 5.7 |
 | nodejs-orm | 4 | 6.0 |
-| quarkus3-virtual | 13 | 12.6 |
-| go-orm | 3 | 43.2 |
-| rust-orm | 2 | 188.6 |
-| quarkus3-native | 11 | 314.9 |
-| spring4-native | 8 | 519.7 |
+| quarkus3-virtual | 4 | 12.7 |
+| go-orm | 2 | 43.4 |
+| rust-orm | 1 | 194.5 |
+| quarkus3-native | 5 | 314.9 |
+| spring4-native | 4 | 523.7 |
 <!-- build-times:end -->
 
 ## Runs
@@ -293,24 +293,10 @@ takes measurably longer.
 | [`20260811_0935__nodejs-orm__node256m_3it.json`](runs/20260811_0935__nodejs-orm__node256m_3it.json) | 2026-08-11T09:35:45Z | nodejs-orm | 3 | `--max-old-space-size=256` | tuned |
 | [`20260811_0956__nodejs-orm__node128m_3it.json`](runs/20260811_0956__nodejs-orm__node128m_3it.json) | 2026-08-11T09:56:40Z | nodejs-orm | 3 | `--max-old-space-size=128` | tuned |
 | [`20260811_1031__8runtimes__Xmx128m-ParallelGC_node512m_3it.json`](runs/20260811_1031__8runtimes__Xmx128m-ParallelGC_node512m_3it.json) | 2026-08-11T10:31:06Z | go-orm, go-sql, nodejs-orm, nodejs-sql, quarkus3-native, quarkus3-virtual, spring4-native, spring4-virtual | 3 | `-Xmx128m` `-XX:+UseParallelGC` `--max-old-space-size=512` | tuned |
-| [`20260812_0621__quarkus3-virtual__Xmx512m-ShenandoahGC_3it.json`](runs/20260812_0621__quarkus3-virtual__Xmx512m-ShenandoahGC_3it.json) | 2026-08-12T06:21:25Z | quarkus3-virtual | 3 | `-Xmx512m` ` -XX:+UseShenandoahGC` | tuned |
-| [`20260812_0639__quarkus3-native+quarkus3-virtual__Xmx48m-ParallelGC_3it.json`](runs/20260812_0639__quarkus3-native+quarkus3-virtual__Xmx48m-ParallelGC_3it.json) | 2026-08-12T06:39:30Z | quarkus3-native, quarkus3-virtual | 3 | `-Xmx48m` `-XX:+UseParallelGC` | tuned |
-| [`20260812_0723__quarkus3-native+quarkus3-virtual__Xmx64m-ParallelGC_3it.json`](runs/20260812_0723__quarkus3-native+quarkus3-virtual__Xmx64m-ParallelGC_3it.json) | 2026-08-12T07:23:20Z | quarkus3-native, quarkus3-virtual | 3 | `-Xmx64m` `-XX:+UseParallelGC` | tuned |
-| [`20260812_0811__spring4-native+spring4-virtual__Xmx96m-ParallelGC_3it.json`](runs/20260812_0811__spring4-native+spring4-virtual__Xmx96m-ParallelGC_3it.json) | 2026-08-12T08:11:25Z | spring4-native, spring4-virtual | 3 | `-Xmx96m` `-XX:+UseParallelGC` | tuned |
-| [`20260812_0906__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx96m-ParallelGC_3it.json`](runs/20260812_0906__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx96m-ParallelGC_3it.json) | 2026-08-12T09:06:55Z | quarkus3-native, quarkus3-virtual, spring4-native, spring4-virtual | 3 | `-Xmx96m` `-XX:+UseParallelGC` | tuned |
-| [`20260812_1136__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx64m-ParallelGC_3it.json`](runs/20260812_1136__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx64m-ParallelGC_3it.json) | 2026-08-12T11:36:08Z | quarkus3-native, quarkus3-virtual, spring4-native, spring4-virtual | 3 | `-Xmx64m` `-XX:+UseParallelGC` | tuned |
-| [`20260812_1513__quarkus3-native+quarkus3-virtual+spring4-native__Xmx48m-ParallelGC_3it.json`](runs/20260812_1513__quarkus3-native+quarkus3-virtual+spring4-native__Xmx48m-ParallelGC_3it.json) | 2026-08-12T15:13:04Z | quarkus3-native, quarkus3-virtual, spring4-native | 3 | `-Xmx48m` `-XX:+UseParallelGC` | tuned |
-| [`20260812_1732__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx96m-ParallelGC_3it.json`](runs/20260812_1732__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx96m-ParallelGC_3it.json) | 2026-08-12T17:32:52Z | quarkus3-native, quarkus3-virtual, spring4-native, spring4-virtual | 3 | `-Xmx96m` `-XX:+UseParallelGC` | tuned |
-| [`20260812_1921__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx64m-ParallelGC_3it.json`](runs/20260812_1921__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx64m-ParallelGC_3it.json) | 2026-08-12T19:21:25Z | quarkus3-native, quarkus3-virtual, spring4-native, spring4-virtual | 3 | `-Xmx64m` `-XX:+UseParallelGC` | tuned |
-| [`20260813_0240__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx128m-ParallelGC_3it.json`](runs/20260813_0240__quarkus3-native+quarkus3-virtual+spring4-native+spring4-virtual__Xmx128m-ParallelGC_3it.json) | 2026-08-13T02:40:30Z | quarkus3-native, quarkus3-virtual, spring4-native, spring4-virtual | 3 | `-Xmx128m` `-XX:+UseParallelGC` | tuned |
-| [`20260813_1622__quarkus3-virtual__Xmx64m-ParallelGC_UnlockExperimentalVMOptions_XX:TrimNativeHeapInterval=5000_3it.json`](runs/20260813_1622__quarkus3-virtual__Xmx64m-ParallelGC_UnlockExperimentalVMOptions_XX:TrimNativeHeapInterval=5000_3it.json) | 2026-08-13T16:22:13Z | quarkus3-virtual | 3 | `-Xmx64m` `-XX:+UseParallelGC  -XX:+UnlockExperimentalVMOptions -XX:TrimNativeHeapInterval=5000` | tuned |
-| [`20260813_1640__spring4-virtual__Xmx96m-ParallelGC_UnlockExperimentalVMOptions_XX:TrimNativeHeapInterval=5000_3it.json`](runs/20260813_1640__spring4-virtual__Xmx96m-ParallelGC_UnlockExperimentalVMOptions_XX:TrimNativeHeapInterval=5000_3it.json) | 2026-08-13T16:40:10Z | spring4-virtual | 3 | `-Xmx96m` `-XX:+UseParallelGC  -XX:+UnlockExperimentalVMOptions -XX:TrimNativeHeapInterval=5000` | tuned |
 | [`20260814_0313__go-orm__default_3it.json`](runs/20260814_0313__go-orm__default_3it.json) | 2026-08-14T03:13:59Z | go-orm | 3 | no ceiling | tuned |
 | [`20260814_0341__go-orm__default_3it.json`](runs/20260814_0341__go-orm__default_3it.json) | 2026-08-14T03:41:33Z | go-orm | 3 | no ceiling | tuned |
 | [`20260814_0855__rust-orm__default_3it.json`](runs/20260814_0855__rust-orm__default_3it.json) | 2026-08-14T08:55:19Z | rust-orm | 3 | no ceiling | tuned |
 | [`20260814_0927__rust-orm__default_3it.json`](runs/20260814_0927__rust-orm__default_3it.json) | 2026-08-14T09:27:58Z | rust-orm | 3 | no ceiling | tuned |
-| [`20260814_1013__5runtimes__Xmx96m-ParallelGC_UnlockExperimentalVMOptions_XX:TrimNativeHeapInterval=5000_3it.json`](runs/20260814_1013__5runtimes__Xmx96m-ParallelGC_UnlockExperimentalVMOptions_XX:TrimNativeHeapInterval=5000_3it.json) | 2026-08-14T10:13:27Z | go-orm, quarkus3-native, quarkus3-virtual, rust-orm, spring4-virtual | 3 | `-Xmx96m` `-XX:+UseParallelGC -XX:+UnlockExperimentalVMOptions -XX:TrimNativeHeapInterval=5000` | tuned |
-| [`20260814_1158__quarkus3-virtual__Xmx64m-ParallelGC_UnlockExperimentalVMOptions_XX:TrimNativeHeapInterval=5000_3it.json`](runs/20260814_1158__quarkus3-virtual__Xmx64m-ParallelGC_UnlockExperimentalVMOptions_XX:TrimNativeHeapInterval=5000_3it.json) | 2026-08-14T11:58:08Z | quarkus3-virtual | 3 | `-Xmx64m` `-XX:+UseParallelGC -XX:+UnlockExperimentalVMOptions -XX:TrimNativeHeapInterval=5000` | tuned |
 <!-- runs -->
 
 ## Results
@@ -349,48 +335,10 @@ One row per runtime, averaged over the run's iterations.
 | `20260811_1031` | quarkus3-virtual | 1 | 128m | 22.2 | 6 154 | 239.1 | 347.6 | 3 604 | 10.74 | closed |
 | `20260811_1031` | spring4-native | 1 | 128m | 946.6 | 1 047 | 238.6 | 251.0 | 769 | 3.18 | closed |
 | `20260811_1031` | spring4-virtual | 1 | 128m | 10.5 | 18 374 | 336.0 | 430.1 | 2 793 | 6.81 | closed |
-| `20260812_0621` | quarkus3-virtual | 2 | 512m | 12.2 | - | - | 796.3 | 5 629 | 7.24 | closed |
-| `20260812_0639` | quarkus3-native | 2 | 48m | 323.0 | - | - | 134.7 | 2 060 | 16.59 | closed |
-| `20260812_0639` | quarkus3-virtual | 2 | 48m | 12.5 | - | - | 285.7 | 5 638 | 19.93 | closed |
-| `20260812_0723` | quarkus3-native | 2 | 64m | 320.3 | - | - | 136.0 | 2 363 | 19.68 | closed |
-| `20260812_0723` | quarkus3-virtual | 2 | 64m | 13.0 | - | - | 302.7 | 6 215 | 21.37 | closed |
-| `20260812_0811` | spring4-native | 2 | 96m | 531.5 | - | - | 242.4 | 1 413 | 5.97 | closed |
-| `20260812_0811` | spring4-virtual | 2 | 96m | 6.1 | - | - | 394.8 | 4 521 | 12.00 | closed |
-| `20260812_0906` | quarkus3-native | 1 | 96m | 591.8 | - | - | 155.7 | 1 866 | 12.19 | closed |
-| `20260812_0906` | quarkus3-virtual | 1 | 96m | 24.1 | - | - | 328.0 | 3 857 | 12.06 | closed |
-| `20260812_0906` | spring4-native | 1 | 96m | 956.8 | - | - | 241.8 | 787 | 3.29 | closed |
-| `20260812_0906` | spring4-virtual | 1 | 96m | 11.3 | - | - | 388.6 | 2 665 | 6.94 | closed |
-| `20260812_1136` | quarkus3-native | 1 | 64m | 599.4 | - | - | 145.1 | 1 636 | 11.65 | closed |
-| `20260812_1136` | quarkus3-virtual | 1 | 64m | 22.2 | - | - | 298.2 | 3 666 | 12.36 | closed |
-| `20260812_1136` | spring4-native | 1 | 64m | 950.6 | - | - | 227.9 | 683 | 3.10 | closed |
-| `20260812_1136` | spring4-virtual | 1 | 64m | 11.6 | - | - | 347.2 | 704 | 2.16 | closed |
-| `20260812_1513` | quarkus3-native | 1 | 48m | 619.1 | - | - | 134.2 | 1 486 | 11.08 | closed |
-| `20260812_1513` | quarkus3-virtual | 1 | 48m | 22.8 | - | - | 282.2 | 3 475 | 12.35 | closed |
-| `20260812_1513` | spring4-native | 1 | 48m | 1028.6 | - | - | 215.2 | 184 | 0.87 | closed |
-| `20260812_1732` | quarkus3-native | 2 | 96m | 311.2 | - | - | 155.4 | 3 418 | 22.86 | closed |
-| `20260812_1732` | quarkus3-virtual | 2 | 96m | 12.5 | - | - | 338.8 | 6 417 | 19.43 | closed |
-| `20260812_1732` | spring4-native | 2 | 96m | 506.6 | - | - | 241.2 | 1 402 | 5.98 | closed |
-| `20260812_1732` | spring4-virtual | 2 | 96m | 5.9 | - | - | 400.7 | 4 575 | 12.10 | closed |
-| `20260812_1921` | quarkus3-native | 2 | 64m | 305.3 | - | - | 138.4 | 2 682 | 21.21 | closed |
-| `20260812_1921` | quarkus3-virtual | 2 | 64m | 12.5 | - | - | 307.2 | 6 242 | 20.59 | closed |
-| `20260812_1921` | spring4-native | 2 | 64m | 511.5 | - | - | 227.3 | 1 214 | 5.35 | closed |
-| `20260812_1921` | spring4-virtual | 2 | 64m | 5.8 | - | - | 353.5 | 1 029 | 3.28 | closed |
-| `20260813_0240` | quarkus3-native | 2 | 128m | 310.0 | - | - | 163.6 | 3 368 | 21.13 | closed |
-| `20260813_0240` | quarkus3-virtual | 2 | 128m | 12.8 | - | - | 355.0 | 6 413 | 18.57 | closed |
-| `20260813_0240` | spring4-native | 2 | 128m | 513.4 | - | - | 250.6 | 1 466 | 5.93 | closed |
-| `20260813_0240` | spring4-virtual | 2 | 128m | 6.1 | - | - | 435.8 | 5 004 | 11.60 | closed |
-| `20260813_1622` | quarkus3-virtual | 2 | 64m | 12.2 | - | - | 259.4 | 5 840 | 23.02 | closed |
-| `20260813_1640` | spring4-virtual | 2 | 96m | 6.3 | - | - | 350.9 | 4 562 | 13.12 | closed |
 | `20260814_0313` | go-orm | 2 | - | 43.0 | 43 | 28.5 | 49.9 | 3 173 | 67.29 | closed |
 | `20260814_0341` | go-orm | 1 | - | 79.5 | 37 | 28.1 | 47.5 | 2 220 | 47.17 | closed |
 | `20260814_0855` | rust-orm | 2 | - | 194.5 | 43 | 10.2 | 21.1 | 2 403 | 118.34 | closed |
 | `20260814_0927` | rust-orm | 1 | - | 298.3 | 33 | 10.1 | 19.1 | 2 288 | 123.31 | closed |
-| `20260814_1013` | go-orm | 2 | - | 42.9 | - | - | 52.8 | 1 998 | 39.03 | open |
-| `20260814_1013` | quarkus3-native | 2 | 96m | 320.2 | - | - | 149.5 | 2 002 | 14.71 | open |
-| `20260814_1013` | quarkus3-virtual | 2 | 96m | 13.0 | - | - | 302.2 | 1 999 | 7.00 | open |
-| `20260814_1013` | rust-orm | 2 | - | 182.7 | - | - | 29.5 | 1 975 | 79.89 | open |
-| `20260814_1013` | spring4-virtual | 2 | 96m | 5.6 | - | - | 353.2 | 1 347 | 5.23 | open |
-| `20260814_1158` | quarkus3-virtual | 2 | 64m | 12.1 | - | - | 264.2 | 1 999 | 7.75 | open |
 <!-- results -->
 
 ### Column provenance
