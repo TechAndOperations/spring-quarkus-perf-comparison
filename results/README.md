@@ -226,13 +226,10 @@ Open-loop `constantRate` scenario (2000 req/s target), with `MALLOC_ARENA_MAX=2`
 exported before launch. RSS and CPU here come from `pidstat -u -w -t -r`, sampled every
 second and averaged over the load-test window only (warmup and cooldown excluded).
 
-![Density, CPU and latency spread, 2 cores](density-small-multiples.svg)
+![Cost and latency spread, 2 cores](density-cost-latency.svg)
 
-Three panels, one per measure, ranked by density: density (log), CPU, and latency as a
-p50→p99.9 range per runtime. CPU is adjusted for runtimes measured at a target rate other
-than 2000 req/s — ×4 for nodejs-orm (500 req/s) and ×(2000/1500) for spring4-native
-(1500 req/s) — so the CPU panel stays comparable across rows; density is plotted as
-measured.
+Two panels, ranked by monthly cost: cost (log) and latency as a p50→p99.9 range per
+runtime — see the table below for how cost is computed.
 
 ```
 MALLOC_ARENA_MAX=2 ./run-benchmarks.sh \
@@ -249,15 +246,15 @@ MALLOC_ARENA_MAX=2 ./run-benchmarks.sh \
   --load-model open
 ```
 
-| Runtime | Xmx | Throughput avg (req/s) | RSS avg (MB) | Density (req/s per MB) | CPU avg (%) | CPU cores (Adjusted) | Mean latency (ms) | p50 (ms) | p90 (ms) | p99 (ms) | p99.9 (ms) | p99.99 (ms) | Max (ms) | "Exceeded session limit" occurrences |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| rust-orm | — | 1997.8 | 25.7 | 77.74 | 94.7 | 0.47 | 15.12 | 4.98 | 50.90 | 111.28 | 163.58 | 169.69 | 173.71 | 1 |
-| go-orm | — | 2002.2 | 51.6 | 38.80 | 118.7 | 0.59 | 18.98 | 13.70 | 39.41 | 87.47 | 167.95 | 254.46 | 310.03 | 0 |
-| quarkus3-native | 64m | 2005.9 | 146.9 | 13.65 | 133.6 | 0.67 | 3.50 | 2.50 | 5.34 | 21.23 | 46.75 | 64.31 | 73.66 | 0 |
-| quarkus3-virtual | 48m | 2004.9 | 239.0 | 8.39 | 92.8 | 0.46 | 2.11 | 1.79 | 2.91 | 7.17 | 25.41 | 34.15 | 39.85 | 0 |
-| spring4-virtual | 128m | 1994.1 | 407.8 | 4.89 | 113.0 | 0.57 | 2.73 | 1.98 | 3.59 | 14.33 | 76.94 | 113.42 | 124.69 | 0 |
-| spring4-native | 256m | 1500.8 | 308.9 | 4.86 | 169.7 | 1.13 | 14.53 | 6.83 | 37.92 | 92.97 | 168.12 | 229.29 | 276.82 | 0 |
-| nodejs-orm | — | 495.7 | 214.1 | 2.32 | 88.2 | 1.78 | 15.08 | 3.66 | 15.25 | 249.91 | 284.51 | 329.25 | 331.35 | 0 |
+| Runtime | Xmx | Throughput avg (req/s) | RSS avg (MB) | CPU avg (%) | Monthly cost (1000 req/s) | Mean latency (ms) | p50 (ms) | p90 (ms) | p99 (ms) | p99.9 (ms) | p99.99 (ms) | Max (ms) | "Exceeded session limit" occurrences |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| quarkus3-virtual | 48m | 2004.9 | 239.0 | 92.8 | $12.97 | 2.11 | 1.79 | 2.91 | 7.17 | 25.41 | 34.15 | 39.85 | 0 |
+| rust-orm | — | 1997.8 | 25.7 | 94.7 | $13.01 | 15.12 | 4.98 | 50.90 | 111.28 | 163.58 | 169.69 | 173.71 | 1 |
+| spring4-virtual | 128m | 1994.1 | 407.8 | 113.0 | $16.02 | 2.73 | 1.98 | 3.59 | 14.33 | 76.94 | 113.42 | 124.69 | 0 |
+| go-orm | — | 2002.2 | 51.6 | 118.7 | $16.29 | 18.98 | 13.70 | 39.41 | 87.47 | 167.95 | 254.46 | 310.03 | 0 |
+| quarkus3-native | 64m | 2005.9 | 146.9 | 133.6 | $18.42 | 3.50 | 2.50 | 5.34 | 21.23 | 46.75 | 64.31 | 73.66 | 0 |
+| spring4-native | 256m | 1500.8 | 308.9 | 169.7 | $31.47 | 14.53 | 6.83 | 37.92 | 92.97 | 168.12 | 229.29 | 276.82 | 0 |
+| nodejs-orm | — | 495.7 | 214.1 | 88.2 | $49.79 | 15.08 | 3.66 | 15.25 | 249.91 | 284.51 | 329.25 | 331.35 | 0 |
 
 ### Startup cost
 
