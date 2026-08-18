@@ -12,26 +12,44 @@ is fast but whose tail is long looks identical to a uniformly-mid runtime under 
 alone"; the range makes that visible, and p99.9 alongside p99 shows whether the tail is
 still climbing or has flattened out.
 
-Both panels are logarithmic: cost spans a factor of ~3.8 and is inherently a ratio
-question ("how many times more expensive"), and the p50-p99.9 range spans a comparable
-spread across runtimes.
+Both panels are linear with a zero baseline: cost spans a factor of ~3.8 and latency's
+p50-p99.9 range, while wider, still reads more honestly zero-anchored - the same
+zero-baseline reasoning peak-throughput-closed-loop.py's panels use.
 
 This is NOT derived from the archived metrics.json files via _chartlib.load(): the
 "Density (open loop)" table is a hand-assembled, one-off sweep, so its rows are
 transcribed here directly from that table.
 """
 
-import math
 from pathlib import Path
 
-from _chartlib import FAMILY_LABEL, SHAPE_LABEL, fmt, kind, log_scale, marker, svg
+from _chartlib import FAMILY_LABEL, SHAPE_LABEL, fmt, kind, linear, marker, svg
 
 STEM = Path(__file__).resolve().parent / "density-cost-latency"
 W = 760
-M = {"t": 112, "l": 150, "r": 24}
+M = {"t": 112, "l": 170, "r": 24}
 GAP = 40
 ROW_H = 46
+BAR_H = 16
+
+# JIT-compiled runtimes (JVM for Quarkus/Spring, V8 for Node) - see "Warmup time" above.
+JIT_RUNTIMES = {"quarkus3-virtual", "spring4-virtual", "nodejs-orm"}
 PANEL_W = (W - M["l"] - M["r"] - GAP) / 2
+
+
+def hbar(x0, y, length, fill, tip, h=BAR_H):
+    """Zero-anchored bar: square at the baseline (x0), rounded at the data end."""
+    r = min(4.0, h / 2, length)
+    top = y - h / 2
+    d = (
+        f"M{x0:.1f},{top + r:.1f} Q{x0:.1f},{top:.1f} {x0 + r:.1f},{top:.1f} "
+        f"L{x0 + length - r:.1f},{top:.1f} Q{x0 + length:.1f},{top:.1f} {x0 + length:.1f},{top + r:.1f} "
+        f"L{x0 + length:.1f},{top + h - r:.1f} Q{x0 + length:.1f},{top + h:.1f} {x0 + length - r:.1f},{top + h:.1f} "
+        f"L{x0 + r:.1f},{top + h:.1f} Q{x0:.1f},{top + h:.1f} {x0:.1f},{top + h - r:.1f} Z"
+    )
+    return f'<path d="{d}" fill="{fill}"><title>{tip}</title></path>'
+
+
 
 # runtime -> (monthly cost $ at 1000 req/s, p50 ms, p99 ms, p99.9 ms, note)
 # Transcribed from the "Density (open loop)" table in README.md, same order (cost
@@ -64,26 +82,28 @@ def build():
         f"ranked by cost</text>"
     )
 
-    cost_lo, cost_hi, cost_ticks = log_scale([r[1] for r in ROWS])
-    lat_lo, lat_hi, lat_ticks = log_scale([v for r in ROWS for v in (r[2], r[3], r[4])])
-    lg = math.log10
+    cost_lo, cost_hi, cost_ticks = linear([0] + [r[1] for r in ROWS], target_ticks=5, pad=0.05, floor=0)
+    lat_lo, lat_hi, lat_ticks = linear(
+        [0] + [v for r in ROWS for v in (r[2], r[3], r[4])], target_ticks=5, pad=0.05, floor=0
+    )
 
     def panel_x(i):
         return M["l"] + i * (PANEL_W + GAP)
 
     def cost_px(v, px0):
-        return px0 + (lg(v) - lg(cost_lo)) / (lg(cost_hi) - lg(cost_lo)) * PANEL_W
+        return px0 + (v - cost_lo) / (cost_hi - cost_lo) * PANEL_W
 
     def lat_px(v, px0):
-        return px0 + (lg(v) - lg(lat_lo)) / (lg(lat_hi) - lg(lat_lo)) * PANEL_W
+        return px0 + (v - lat_lo) / (lat_hi - lat_lo) * PANEL_W
 
     row_y = {rt: M["t"] + 30 + j * ROW_H for j, (rt, *_r) in enumerate(ROWS)}
     bottom = M["t"] + len(ROWS) * ROW_H
 
     for rt in row_y:
+        label = f"{rt} (JIT)" if rt in JIT_RUNTIMES else rt
         o.append(
             f'<text x="{M["l"] - 12}" y="{row_y[rt] + 4:.1f}" fill="{ink}" font-size="11.5" '
-            f'text-anchor="end">{rt}</text>'
+            f'text-anchor="end">{label}</text>'
         )
 
     px0 = panel_x(0)
@@ -102,7 +122,10 @@ def build():
     for rt, cost, p50, p99, p999, note in ROWS:
         fam, shape = kind(rt)
         y = row_y[rt]
-        o.append(marker(shape, cost_px(cost, px0), y, f"var(--{fam})", surface, f"{rt} · {note} · cost ${cost:g}"))
+        x = cost_px(cost, px0)
+        tip = f"{rt} · {note} · cost ${cost:g}"
+        o.append(hbar(px0, y, x - px0, f"var(--{fam})", tip))
+        o.append(marker(shape, x, y, f"var(--{fam})", surface, tip, r=5.0))
 
     px1 = panel_x(1)
     o.append(
