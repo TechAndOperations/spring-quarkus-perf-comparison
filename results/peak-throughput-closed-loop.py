@@ -7,12 +7,10 @@ by density-small-multiples.py applies here too: one column per measure, each on 
 honestly-scaled axis, sharing the same runtime rows so a runtime's story reads across
 the row.
 
-Throughput is linear with a zero baseline - it's the one measure here with a meaningful
-zero and a modest ~10x spread, so a bar-like zero-anchored reading is more honest than a
-log axis would be. Monthly cost and Max latency are both logarithmic: cost spans a factor
-of ~7.6 and is inherently a ratio question ("how many times more expensive"), and Max
-latency spans a factor of ~9, the same reasoning density-small-multiples.py's latency
-panel already uses.
+All three panels are linear with a zero baseline: each measure here has a meaningful
+zero and none spans more than an order of magnitude (~10x for throughput, ~7.6x for
+cost, ~9x for Max latency), so a zero-anchored reading is more honest than a log axis
+would be - unlike, say, density's ~134x spread, log doesn't earn its keep here.
 
 This is NOT derived from the archived metrics.json files via _chartlib.load(): the
 "Peak throughput (closed loop)" table is a single one-off run (7 runtimes, one
@@ -23,6 +21,22 @@ import math
 from pathlib import Path
 
 from _chartlib import FAMILY_LABEL, SHAPE_LABEL, fmt, kind, linear, log_scale, marker, svg
+
+BAR_H = 16
+
+
+def hbar(x0, y, length, fill, tip, h=BAR_H):
+    """Horizontal bar: square at the baseline (x0), rounded at the data end - the
+    mirror of _chartlib.bar()'s vertical convention, rotated onto a row-based layout."""
+    r = min(4.0, h / 2, length)
+    top = y - h / 2
+    d = (
+        f"M{x0:.1f},{top + r:.1f} Q{x0:.1f},{top:.1f} {x0 + r:.1f},{top:.1f} "
+        f"L{x0 + length - r:.1f},{top:.1f} Q{x0 + length:.1f},{top:.1f} {x0 + length:.1f},{top + r:.1f} "
+        f"L{x0 + length:.1f},{top + h - r:.1f} Q{x0 + length:.1f},{top + h:.1f} {x0 + length - r:.1f},{top + h:.1f} "
+        f"L{x0 + r:.1f},{top + h:.1f} Q{x0:.1f},{top + h:.1f} {x0:.1f},{top + h - r:.1f} Z"
+    )
+    return f'<path d="{d}" fill="{fill}"><title>{tip}</title></path>'
 
 STEM = Path(__file__).resolve().parent / "peak-throughput-closed-loop"
 W = 980
@@ -46,8 +60,8 @@ ROWS = [
 
 PANELS = (
     ("Throughput (req/s)", "linear", [0] + [r[1] for r in ROWS]),
-    ("Monthly cost, 1000 req/s ($)", "log", [r[2] for r in ROWS]),
-    ("Max latency (ms)", "log", [r[3] for r in ROWS]),
+    ("Monthly cost, 1000 req/s ($)", "linear", [0] + [r[2] for r in ROWS]),
+    ("Max latency (ms)", "linear", [0] + [r[3] for r in ROWS]),
 )
 
 H = M["t"] + len(ROWS) * ROW_H + 70
@@ -127,9 +141,12 @@ def build():
             v = (throughput, cost, maxlat)[i]
             label = {0: "throughput", 1: "monthly cost", 2: "max latency"}[i]
             unit = {0: "req/s", 1: "$", 2: "ms"}[i]
-            o.append(
-                marker(shape, px(v), y, f"var(--{fam})", surface, f"{rt} · {note} · {label} {v:g} {unit}")
-            )
+            tip = f"{rt} · {note} · {label} {v:g} {unit}"
+            x = px(v)
+            o.append(hbar(px0, y, x - px0, f"var(--{fam})", tip))
+            # The bar carries family (colour) and magnitude; a marker at its tip adds
+            # execution mode (shape), the second half of this repo's composite encoding.
+            o.append(marker(shape, x, y, f"var(--{fam})", surface, tip, r=5.0))
 
     ly = bottom + 44
     lx = M["l"]
