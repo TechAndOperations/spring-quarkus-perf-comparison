@@ -23,7 +23,7 @@ def cores_of(data):
 
 def main():
     totals = {}
-    for f in sorted(glob.glob(str(HERE / "*.json"))):
+    for f in sorted(glob.glob(str(HERE / "runs" / "*.json"))):
         data = json.load(open(f))
         if cores_of(data) != "2":
             continue
