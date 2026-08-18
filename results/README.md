@@ -389,3 +389,7 @@ hit while building it:
   — the optimisation enabled here via `enable-reflection-free-serializers`
 - [New benchmarks](https://quarkus.io/blog/new-benchmarks/) — presenting the bench and its
   results
+
+On the closed-loop caveats discussed above:
+
+- [How NOT to Measure Latency](https://www.youtube.com/watch?v=lJ8ydIuPFeU) by Gil Tene
