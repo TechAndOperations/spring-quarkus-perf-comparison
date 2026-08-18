@@ -197,10 +197,37 @@ MALLOC_ARENA_MAX=2 ./run-benchmarks.sh \
 ![Peak throughput, cost and max latency, closed loop](peak-throughput-closed-loop.svg)
 
 All seven runtimes from the command above, ranked by raw throughput. Latencies other than
-Max are dropped: this is closed-loop, so mean/p50/p90/p99 already read compressed by
-coordinated omission (see caveats below); Max is kept because — being a single observed
-sample rather than an average over a distorted sample — it still reacts to real
-degradation.
+Max are dropped: this is closed-loop (a fixed number of connections looping as fast as
+the server allows), which is subject to coordinated omission (see caveats below). When
+the server slows down, a closed-loop connection doesn't queue a backlog of arriving
+requests — it just waits, then sends fewer requests overall. Mean/p50/p90/p99 are computed
+over that shrunken, biased sample, so they systematically under-represent how bad a
+slowdown actually is; the more concurrent load a real deployment would see, the more these
+figures diverge from reality. Don't use them to compare runtimes' actual latency under
+load.
+
+Max is kept, but still only with caution. It doesn't suffer the same dilution — a slow
+response that *was* sent and *did* complete is recorded at its real duration, not averaged
+away — so unlike the other percentiles it does react to genuine degradation. But it
+remains a single sample (n=1) rather than a distribution: two runs can produce very
+different Max values purely by chance, and depending on how it was measured it may not
+even be the true worst case — pending requests still in flight when the load phase ends
+are typically dropped rather than counted as (very long) latencies, so the actual worst
+straggler can be invisible to it. Treat Max as a coarse, noisy signal that something
+degraded, not a number to compare precisely across runtimes.
+
+Throughput itself — and everything derived from it here, cost included — carries two more
+caveats worth keeping in mind, since closed-loop lets each runtime settle at its own rate
+rather than a shared target:
+
+1. **Uneven sample size.** A slow runtime that only completes a few dozen requests over the
+   30-second load window produces a noisier throughput estimate than a fast one completing
+   tens of thousands. The comparison itself stays meaningful; its precision doesn't.
+2. **Uneven warmup.** (Already noted in "Warmup time" above.) JIT runtimes ramp up via the
+   volume of requests they process. A slow runtime that handles fewer requests during the
+   2-minute warmup may not reach the same C2 compilation tier a fast runtime does — its
+   measured throughput can suffer for it without that being a genuine structural
+   disadvantage of the runtime.
 
 Monthly cost (1000 req/s) scales this run's CPU and RSS linearly to a 1000 req/s target
 (`metric / Throughput avg * 1000`) and prices the result against Azure's Dadsv5/Eadsv5
@@ -364,6 +391,13 @@ the table but remain in the archived JSON.
 
 ## Known caveats
 
+- **Closed-loop latency is subject to coordinated omission.** A fixed number of
+  connections looping as fast as the server allows doesn't queue up a backlog when the
+  server slows — it just sends fewer requests — so mean/p50/p90/p99 computed over that
+  shrunken sample understate real degradation, and get worse the further the true
+  concurrency of a production workload exceeds this test's. See the
+  [Peak throughput (closed loop)](#peak-throughput-closed-loop) section for what that
+  means for each column there, and Gil Tene's talk under Further reading.
 - **Density inherits the memory budget.** It's a throughput/RSS-under-load ratio, so a
   generous `-Xmx` mechanically degrades it without the runtime being at fault.
 - **This is not dedicated performance hardware.** Every run in this archive was executed
