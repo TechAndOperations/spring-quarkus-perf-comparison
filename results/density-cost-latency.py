@@ -33,7 +33,7 @@ ROW_H = 46
 BAR_H = 16
 
 # JIT-compiled runtimes (JVM for Quarkus/Spring, V8 for Node) - see "Warmup time" above.
-JIT_RUNTIMES = {"quarkus3-virtual", "spring4-virtual", "nodejs-orm"}
+JIT_RUNTIMES = {"quarkus3-virtual", "spring4-virtual", "nodejs-orm", "nodejs-sql"}
 PANEL_W = (W - M["l"] - M["r"] - GAP) / 2
 
 
@@ -61,10 +61,11 @@ ROWS = [
     ("go-orm", 16.29, 13.70, 87.47, 167.95, "—"),
     ("quarkus3-native", 18.42, 2.50, 21.23, 46.75, "-Xmx 64m"),
     ("spring4-native", 31.47, 6.83, 92.97, 168.12, "-Xmx 256m, target-rate 1500"),
+    ("nodejs-sql", 35.17, 2.03, 28.18, 77.07, "-Xmx 384m, target-rate 500"),
     ("nodejs-orm", 49.79, 3.66, 249.91, 284.51, "target-rate 500"),
 ]
 
-H = M["t"] + len(ROWS) * ROW_H + 70
+H = M["t"] + len(ROWS) * ROW_H + 110
 
 
 def build():
