@@ -256,8 +256,8 @@ second and averaged over the load-test window only (warmup and cooldown excluded
 
 ![Cost and latency spread, 2 cores](density-cost-latency.svg)
 
-Two panels, ranked by monthly cost: cost (log) and latency as a p50→p99.9 range per
-runtime — see the table below for how cost is computed.
+Two panels, ranked by monthly cost: cost and latency as a p50→p99.9 range per runtime —
+see the table below for how cost is computed.
 
 ```
 MALLOC_ARENA_MAX=2 ./run-benchmarks.sh \
@@ -282,6 +282,7 @@ MALLOC_ARENA_MAX=2 ./run-benchmarks.sh \
 | go-orm | — | 2002.2 | 51.6 | 118.7 | $16.29 | 18.98 | 13.70 | 39.41 | 87.47 | 167.95 | 254.46 | 310.03 | 0 |
 | quarkus3-native | 64m | 2005.9 | 146.9 | 133.6 | $18.42 | 3.50 | 2.50 | 5.34 | 21.23 | 46.75 | 64.31 | 73.66 | 0 |
 | spring4-native | 256m | 1500.8 | 308.9 | 169.7 | $31.47 | 14.53 | 6.83 | 37.92 | 92.97 | 168.12 | 229.29 | 276.82 | 0 |
+| nodejs-sql | — | 496.2 | 203.3 | 61.9 | $35.17 | 3.28 | 2.03 | 5.07 | 28.18 | 77.07 | 129.15 | 130.37 | 0 |
 | nodejs-orm | — | 495.7 | 214.1 | 88.2 | $49.79 | 15.08 | 3.66 | 15.25 | 249.91 | 284.51 | 329.25 | 331.35 | 0 |
 
 ### Startup cost
