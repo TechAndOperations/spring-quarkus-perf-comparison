@@ -166,13 +166,12 @@ Regenerated from the archived JSON files — rerun after every `archive.py`:
 
 ```sh
 ./startup-cost.py          # scatter: TTFR × RSS after the 1st request
-./throughput-ranking.py    # bars: each runtime's peak throughput
 ```
 
-Each script produces **one set per core count** found in the archive, suffixed `-2c` or
-`-1c`. Runs at different core counts aren't comparable, so they don't share a chart.
+It produces **one set per core count** found in the archive, suffixed `-2c` or `-1c`.
+Runs at different core counts aren't comparable, so they don't share a chart.
 
-Both share `_chartlib.py` — loading, scales, marks, palette. Colour carries the family
+It uses `_chartlib.py` — loading, scales, marks, palette. Colour carries the family
 (Quarkus, Spring, non-JVM) and shape carries the execution mode: seven runtimes exceed the
 three categorical slots the "all pairs" validation allows, hence this composite encoding.
 Only the **ORM** path is plotted; the `-sql` variants answer a different question and stay
@@ -195,11 +194,7 @@ MALLOC_ARENA_MAX=2 ./run-benchmarks.sh \
   --jvm-memory '-Xmx512m' 
 ```
 
-![Peak throughput, 2 cores](throughput-ranking-2c.svg)
-
-Each runtime appears only once, at its best rung — and **it's not the same rung depending on
-the measure**: raw throughput peaks at `-Xmx` 512 or 384 MiB, density at 128 MiB. The
-ranking partially flips as a result, with Rust first on density and fifth on throughput.
+![Peak throughput and max latency, closed loop](peak-throughput-closed-loop.svg)
 
 All seven runtimes from the command above, ranked by raw throughput. CPU cores (Adjusted)
 here is normalized to 1000 req/s (`CPU avg / 100 / Throughput avg * 1000`), not 2000 like
