@@ -17,6 +17,7 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+RUNS_DIR = HERE / "runs"
 README = HERE / "README.md"
 RUNS_MARKER = "<!-- runs -->"
 RESULTS_MARKER = "<!-- results -->"
@@ -138,16 +139,17 @@ def main():
     iterations = str(config.get("num_iterations") or "?")
 
     name = f"{stamp}__{label}__{condense(runtimes, config)}_{iterations}it.json"
-    dest = HERE / name
+    dest = RUNS_DIR / name
 
     if dest.exists():
         print(f"already archived: {name}")
         return
 
+    RUNS_DIR.mkdir(exist_ok=True)
     shutil.copy2(src, dest)
 
     index_row = (
-        f"| [`{name}`]({name}) "
+        f"| [`{name}`](runs/{name}) "
         f"| {timing.get('start', '?')} "
         f"| {', '.join(runtimes)} "
         f"| {iterations} "

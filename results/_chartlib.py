@@ -84,7 +84,7 @@ def load(cores=None):
 
     Cores come last so existing index-based unpacking keeps working."""
     rows = []
-    for f in sorted(glob.glob(str(HERE / "*.json"))):
+    for f in sorted(glob.glob(str(HERE / "runs" / "*.json"))):
         m = re.search(r"Xmx(\d+)m", f)
         xmx = int(m.group(1)) if m else None
         data = json.load(open(f))
@@ -110,7 +110,7 @@ def load_startup(cores=None):
     Only produced when the run included measure-time-to-first-request and measure-rss.
     """
     rows = []
-    for f in sorted(glob.glob(str(HERE / "*.json"))):
+    for f in sorted(glob.glob(str(HERE / "runs" / "*.json"))):
         m = re.search(r"Xmx(\d+)m", f)
         xmx = int(m.group(1)) if m else None
         data = json.load(open(f))
