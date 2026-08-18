@@ -40,10 +40,13 @@ def hbar(x0, y, length, fill, tip, h=BAR_H):
 
 STEM = Path(__file__).resolve().parent / "peak-throughput-closed-loop"
 W = 980
-M = {"t": 96, "l": 150, "r": 24}
+M = {"t": 96, "l": 170, "r": 24}
 GAP = 40
 ROW_H = 46
 PANEL_W = (W - M["l"] - M["r"] - 2 * GAP) / 3
+
+# JIT-compiled runtimes (JVM for Quarkus/Spring, V8 for Node) - see "Warmup time" above.
+JIT_RUNTIMES = {"quarkus3-virtual", "spring4-virtual", "nodejs-orm"}
 
 # runtime -> (throughput req/s, monthly cost $ at 1000 req/s, max latency ms, note)
 # Transcribed from the "Peak throughput (closed loop)" table in README.md, same order
@@ -104,9 +107,10 @@ def build():
     bottom = M["t"] + len(ROWS) * ROW_H
 
     for rt in row_y:
+        label = f"{rt} (JIT)" if rt in JIT_RUNTIMES else rt
         o.append(
             f'<text x="{M["l"] - 12}" y="{row_y[rt] + 4:.1f}" fill="{ink}" font-size="11.5" '
-            f'text-anchor="end">{rt}</text>'
+            f'text-anchor="end">{label}</text>'
         )
 
     for i, ((title, kind_, _values), (skind, lo, hi, ticks)) in enumerate(zip(PANELS, panel_scales)):
