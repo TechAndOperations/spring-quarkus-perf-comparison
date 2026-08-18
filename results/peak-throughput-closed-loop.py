@@ -46,7 +46,7 @@ ROW_H = 46
 PANEL_W = (W - M["l"] - M["r"] - 2 * GAP) / 3
 
 # JIT-compiled runtimes (JVM for Quarkus/Spring, V8 for Node) - see "Warmup time" above.
-JIT_RUNTIMES = {"quarkus3-virtual", "spring4-virtual", "nodejs-orm"}
+JIT_RUNTIMES = {"quarkus3-virtual", "spring4-virtual", "nodejs-orm", "nodejs-sql"}
 
 # runtime -> (throughput req/s, monthly cost $ at 1000 req/s, max latency ms, note)
 # Transcribed from the "Peak throughput (closed loop)" table in README.md, same order
@@ -58,6 +58,7 @@ ROWS = [
     ("go-orm", 3370.0, 12.02, 185.25, "—"),
     ("rust-orm", 2394.7, 12.91, 124.08, "—"),
     ("spring4-native", 1736.1, 30.01, 637.53, "-Xmx 512m"),
+    ("nodejs-sql", 1143.7, 27.44, 299.89, "—"),
     ("nodejs-orm", 689.8, 47.92, 496.33, "—"),
 ]
 
