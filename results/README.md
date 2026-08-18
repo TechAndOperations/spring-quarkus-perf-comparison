@@ -197,8 +197,10 @@ second and averaged over the load-test window only (warmup and cooldown excluded
 ![Density, CPU and latency spread, 2 cores](density-small-multiples.svg)
 
 Three panels, one per measure, ranked by density: density (log), CPU, and latency as a
-p50→p99 range per runtime. nodejs-orm's CPU is adjusted (×4) to account for its lower
-target rate (500 vs. 2000 req/s); density is plotted as measured.
+p50→p99 range per runtime. CPU is adjusted for runtimes measured at a target rate other
+than 2000 req/s — ×4 for nodejs-orm (500 req/s) and ×(2000/1500) for spring4-native
+(1500 req/s) — so the CPU panel stays comparable across rows; density is plotted as
+measured.
 
 ```
 MALLOC_ARENA_MAX=2 ./run-benchmarks.sh \
@@ -209,9 +211,9 @@ MALLOC_ARENA_MAX=2 ./run-benchmarks.sh \
   --repo-url /home/sevel/projects/spring-quarkus-perf-comparison \
   --jvm-args '-XX:+UseParallelGC -XX:+UnlockExperimentalVMOptions -XX:TrimNativeHeapInterval=5000' \
   --iterations 3 \
-  --runtimes 'XX,XX' \
-  --jvm-memory '-XmxXXm' \
-  --target-rate XX \
+  --runtimes '...' \
+  --jvm-memory '-Xmx...m' \
+  --target-rate ... \
   --load-model open
 ```
 
@@ -221,14 +223,9 @@ MALLOC_ARENA_MAX=2 ./run-benchmarks.sh \
 | go-orm | — | 2002.2 | 51.6 | 38.80 | 118.7 | 18.98 | 13.70 | 39.41 | 87.47 | 167.95 | 254.46 | 310.03 | 0 |
 | quarkus3-native | 64m | 2005.9 | 146.9 | 13.65 | 133.6 | 3.50 | 2.50 | 5.34 | 21.23 | 46.75 | 64.31 | 73.66 | 0 |
 | quarkus3-virtual | 48m | 2004.9 | 239.0 | 8.39 | 92.8 | 2.11 | 1.79 | 2.91 | 7.17 | 25.41 | 34.15 | 39.85 | 0 |
-| spring4-native | 128m | 1483.4 | 268.7 | 5.52 | 173.3 | 58.29 | 33.34 | 143.74 | 248.34 | 337.99 | 419.43 | 490.03 | 1 |
 | spring4-virtual | 128m | 1994.1 | 407.8 | 4.89 | 113.0 | 2.73 | 1.98 | 3.59 | 14.33 | 76.94 | 113.42 | 124.69 | 0 |
 | spring4-native | 256m | 1500.8 | 308.9 | 4.86 | 169.7 | 14.53 | 6.83 | 37.92 | 92.97 | 168.12 | 229.29 | 276.82 | 0 |
-| spring4-native | 96m | 1257.8 | 279.3 | 4.50 | 165.0 | 223.78 | 203.77 | 384.48 | 630.54 | 1034.59 | 1364.55 | 1624.59 | 3 |
-| spring4-native | 384m | 1495.9 | 357.4 | 4.19 | 168.7 | 10.67 | 5.78 | 24.38 | 69.64 | 137.36 | 227.02 | 256.20 | 0 |
 | nodejs-orm | — | 495.7 | 214.1 | 2.32 | 88.2 | 15.08 | 3.66 | 15.25 | 249.91 | 284.51 | 329.25 | 331.35 | 0 |
-| spring4-native | 64m | 209.5 | 276.8 | 0.76 | 109.3 | 1410.21 | 1270.87 | 2483.03 | 5463.78 | 9484.72 | 10278.84 | 10278.84 | 3 |
-| spring4-native | 48m | 100.3 | 283.4 | 0.35 | 89.5 | 2399.92 | 1817.53 | 4574.59 | 10390.69 | 13869.17 | 15658.73 | 15658.73 | 3 |
 
 ### Startup cost
 

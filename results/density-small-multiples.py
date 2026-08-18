@@ -32,7 +32,7 @@ from pathlib import Path
 from _chartlib import FAMILY_LABEL, SHAPE_LABEL, fmt, kind, linear, log_scale, marker, svg
 
 STEM = Path(__file__).resolve().parent / "density-small-multiples"
-W, H = 980, 500
+W = 980
 M = {"t": 112, "l": 150, "r": 24}
 GAP = 40
 ROW_H = 46
@@ -47,6 +47,8 @@ ROWS = [
     ("quarkus3-native", 13.65, 133.6, 2.50, 21.23, "-Xmx 64m"),
     ("quarkus3-virtual", 8.39, 92.8, 1.79, 7.17, "-Xmx 48m"),
     ("spring4-virtual", 4.89, 113.0, 1.98, 14.33, "-Xmx 128m"),
+    # Measured at --target-rate 1500 (vs. 2000 for the others): CPU x (2000/1500).
+    ("spring4-native", 4.86, 226.27, 6.83, 92.97, "-Xmx 256m, target-rate 1500, CPU adjusted"),
     # Measured at --target-rate 500 (vs. 2000 for the others): CPU x 4. Density and
     # p50/p99 are plotted as measured - neither scales with target rate.
     ("nodejs-orm", 2.32, 352.8, 3.66, 249.91, "target-rate 500, CPU adjusted"),
@@ -57,6 +59,9 @@ PANELS = (
     ("CPU, adjusted (%)", "linear", [r[2] for r in ROWS]),
     ("Latency, p50→p99 (ms)", "log", [v for r in ROWS for v in (r[3], r[4])]),
 )
+
+# Canvas grows with the row count so the legend never collides with the last row.
+H = M["t"] + len(ROWS) * ROW_H + 46 + 52 + 20
 
 
 def scales():
