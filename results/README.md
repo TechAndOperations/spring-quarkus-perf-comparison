@@ -194,25 +194,31 @@ MALLOC_ARENA_MAX=2 ./run-benchmarks.sh \
   --jvm-memory '-Xmx512m' 
 ```
 
-![Peak throughput and max latency, closed loop](peak-throughput-closed-loop.svg)
+![Peak throughput, cost and max latency, closed loop](peak-throughput-closed-loop.svg)
 
-All seven runtimes from the command above, ranked by raw throughput. CPU cores (Adjusted)
-here is normalized to 1000 req/s (`CPU avg / 100 / Throughput avg * 1000`), not 2000 like
-the Density table below — this run has no fixed target rate to normalize against, so 1000
-is just a round reference point. Latencies other than Max are dropped: this is closed-loop,
-so mean/p50/p90/p99 already read compressed by coordinated omission (see caveats below); Max
-is kept because — being a single observed sample rather than an average over a distorted
-sample — it still reacts to real degradation.
+All seven runtimes from the command above, ranked by raw throughput. Latencies other than
+Max are dropped: this is closed-loop, so mean/p50/p90/p99 already read compressed by
+coordinated omission (see caveats below); Max is kept because — being a single observed
+sample rather than an average over a distorted sample — it still reacts to real
+degradation.
 
-| Runtime | Xmx | Throughput avg (req/s) | RSS avg (MB) | Density (req/s per MB) | CPU avg (%) | CPU cores (Adjusted) | Max (ms) | "Exceeded session limit" occurrences |
-|---|---|---|---|---|---|---|---|---|
-| quarkus3-virtual | 512m | 7038.1 | 437.7 | 16.08 | 158.1 | 0.22 | 70.52 | 0 |
-| spring4-virtual | 512m | 5661.1 | 530.8 | 10.67 | 187.6 | 0.33 | 154.49 | 0 |
-| quarkus3-native | 512m | 4192.9 | 292.8 | 14.32 | 186.7 | 0.45 | 258.65 | 0 |
-| go-orm | — | 3370.0 | 53.2 | 63.35 | 147.5 | 0.44 | 185.25 | 0 |
-| rust-orm | — | 2394.7 | 19.4 | 123.44 | 112.8 | 0.47 | 124.08 | 0 |
-| spring4-native | 512m | 1736.1 | 406.3 | 4.27 | 186.6 | 1.08 | 637.53 | 0 |
-| nodejs-orm | — | 689.8 | 224.2 | 3.08 | 118.7 | 1.72 | 496.33 | 0 |
+Monthly cost (1000 req/s) scales this run's CPU and RSS linearly to a 1000 req/s target
+(`metric / Throughput avg * 1000`) and prices the result against Azure's Dadsv5/Eadsv5
+on-demand Linux rate — ≈$0.0375/vCPU-hour and ≈$0.0035/GB RAM-hour, both derived from
+published pay-as-you-go prices for same-CPU-generation D/E-series sizes — then multiplies
+by 730 hours/month. It's a rough per-request cost proxy, not a real sizing estimate: it
+assumes perfectly divisible, always-on capacity and ignores everything a real deployment
+adds (networking, storage, redundancy, the fact that you can't actually rent 0.06 vCPU).
+
+| Runtime | Xmx | Throughput avg (req/s) | RSS avg (MB) | CPU avg (%) | Monthly cost (1000 req/s) | Max (ms) | "Exceeded session limit" occurrences |
+|---|---|---|---|---|---|---|---|
+| quarkus3-virtual | 512m | 7038.1 | 437.7 | 158.1 | $6.30 | 70.52 | 0 |
+| spring4-virtual | 512m | 5661.1 | 530.8 | 187.6 | $9.31 | 154.49 | 0 |
+| quarkus3-native | 512m | 4192.9 | 292.8 | 186.7 | $12.36 | 258.65 | 0 |
+| go-orm | — | 3370.0 | 53.2 | 147.5 | $12.02 | 185.25 | 0 |
+| rust-orm | — | 2394.7 | 19.4 | 112.8 | $12.91 | 124.08 | 0 |
+| spring4-native | 512m | 1736.1 | 406.3 | 186.6 | $30.01 | 637.53 | 0 |
+| nodejs-orm | — | 689.8 | 224.2 | 118.7 | $47.92 | 496.33 | 0 |
 
 ### Density (open loop)
 
