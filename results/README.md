@@ -210,7 +210,7 @@ second and averaged over the load-test window only (warmup and cooldown excluded
 ![Density, CPU and latency spread, 2 cores](density-small-multiples.svg)
 
 Three panels, one per measure, ranked by density: density (log), CPU, and latency as a
-p50→p99 range per runtime. CPU is adjusted for runtimes measured at a target rate other
+p50→p99.9 range per runtime. CPU is adjusted for runtimes measured at a target rate other
 than 2000 req/s — ×4 for nodejs-orm (500 req/s) and ×(2000/1500) for spring4-native
 (1500 req/s) — so the CPU panel stays comparable across rows; density is plotted as
 measured.
