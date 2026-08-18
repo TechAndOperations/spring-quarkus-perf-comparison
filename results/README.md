@@ -201,6 +201,24 @@ Each runtime appears only once, at its best rung — and **it's not the same run
 the measure**: raw throughput peaks at `-Xmx` 512 or 384 MiB, density at 128 MiB. The
 ranking partially flips as a result, with Rust first on density and fifth on throughput.
 
+All seven runtimes from the command above, ranked by raw throughput. CPU cores (Adjusted)
+here is normalized to 1000 req/s (`CPU avg / 100 / Throughput avg * 1000`), not 2000 like
+the Density table below — this run has no fixed target rate to normalize against, so 1000
+is just a round reference point. Latencies other than Max are dropped: this is closed-loop,
+so mean/p50/p90/p99 already read compressed by coordinated omission (see caveats below); Max
+is kept because — being a single observed sample rather than an average over a distorted
+sample — it still reacts to real degradation.
+
+| Runtime | Xmx | Throughput avg (req/s) | RSS avg (MB) | Density (req/s per MB) | CPU avg (%) | CPU cores (Adjusted) | Max (ms) | "Exceeded session limit" occurrences |
+|---|---|---|---|---|---|---|---|---|
+| quarkus3-virtual | 512m | 7038.1 | 437.7 | 16.08 | 158.1 | 0.22 | 70.52 | 0 |
+| spring4-virtual | 512m | 5661.1 | 530.8 | 10.67 | 187.6 | 0.33 | 154.49 | 0 |
+| quarkus3-native | 512m | 4192.9 | 292.8 | 14.32 | 186.7 | 0.45 | 258.65 | 0 |
+| go-orm | — | 3370.0 | 53.2 | 63.35 | 147.5 | 0.44 | 185.25 | 0 |
+| rust-orm | — | 2394.7 | 19.4 | 123.44 | 112.8 | 0.47 | 124.08 | 0 |
+| spring4-native | 512m | 1736.1 | 406.3 | 4.27 | 186.6 | 1.08 | 637.53 | 0 |
+| nodejs-orm | — | 689.8 | 224.2 | 3.08 | 118.7 | 1.72 | 496.33 | 0 |
+
 ### Density (open loop)
 
 Open-loop `constantRate` scenario (2000 req/s target), with `MALLOC_ARENA_MAX=2`
@@ -232,13 +250,13 @@ MALLOC_ARENA_MAX=2 ./run-benchmarks.sh \
 
 | Runtime | Xmx | Throughput avg (req/s) | RSS avg (MB) | Density (req/s per MB) | CPU avg (%) | CPU cores (Adjusted) | Mean latency (ms) | p50 (ms) | p90 (ms) | p99 (ms) | p99.9 (ms) | p99.99 (ms) | Max (ms) | "Exceeded session limit" occurrences |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| rust-orm | — | 1997.8 | 25.7 | 77.74 | 94.7 | 0.95 | 15.12 | 4.98 | 50.90 | 111.28 | 163.58 | 169.69 | 173.71 | 1 |
-| go-orm | — | 2002.2 | 51.6 | 38.80 | 118.7 | 1.19 | 18.98 | 13.70 | 39.41 | 87.47 | 167.95 | 254.46 | 310.03 | 0 |
-| quarkus3-native | 64m | 2005.9 | 146.9 | 13.65 | 133.6 | 1.33 | 3.50 | 2.50 | 5.34 | 21.23 | 46.75 | 64.31 | 73.66 | 0 |
-| quarkus3-virtual | 48m | 2004.9 | 239.0 | 8.39 | 92.8 | 0.93 | 2.11 | 1.79 | 2.91 | 7.17 | 25.41 | 34.15 | 39.85 | 0 |
-| spring4-virtual | 128m | 1994.1 | 407.8 | 4.89 | 113.0 | 1.13 | 2.73 | 1.98 | 3.59 | 14.33 | 76.94 | 113.42 | 124.69 | 0 |
-| spring4-native | 256m | 1500.8 | 308.9 | 4.86 | 169.7 | 2.26 | 14.53 | 6.83 | 37.92 | 92.97 | 168.12 | 229.29 | 276.82 | 0 |
-| nodejs-orm | — | 495.7 | 214.1 | 2.32 | 88.2 | 3.56 | 15.08 | 3.66 | 15.25 | 249.91 | 284.51 | 329.25 | 331.35 | 0 |
+| rust-orm | — | 1997.8 | 25.7 | 77.74 | 94.7 | 0.47 | 15.12 | 4.98 | 50.90 | 111.28 | 163.58 | 169.69 | 173.71 | 1 |
+| go-orm | — | 2002.2 | 51.6 | 38.80 | 118.7 | 0.59 | 18.98 | 13.70 | 39.41 | 87.47 | 167.95 | 254.46 | 310.03 | 0 |
+| quarkus3-native | 64m | 2005.9 | 146.9 | 13.65 | 133.6 | 0.67 | 3.50 | 2.50 | 5.34 | 21.23 | 46.75 | 64.31 | 73.66 | 0 |
+| quarkus3-virtual | 48m | 2004.9 | 239.0 | 8.39 | 92.8 | 0.46 | 2.11 | 1.79 | 2.91 | 7.17 | 25.41 | 34.15 | 39.85 | 0 |
+| spring4-virtual | 128m | 1994.1 | 407.8 | 4.89 | 113.0 | 0.57 | 2.73 | 1.98 | 3.59 | 14.33 | 76.94 | 113.42 | 124.69 | 0 |
+| spring4-native | 256m | 1500.8 | 308.9 | 4.86 | 169.7 | 1.13 | 14.53 | 6.83 | 37.92 | 92.97 | 168.12 | 229.29 | 276.82 | 0 |
+| nodejs-orm | — | 495.7 | 214.1 | 2.32 | 88.2 | 1.78 | 15.08 | 3.66 | 15.25 | 249.91 | 284.51 | 329.25 | 331.35 | 0 |
 
 ### Startup cost
 

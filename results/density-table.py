@@ -141,9 +141,9 @@ def build_row(runtime, metrics, logs_dir):
         "rss": rss,
         "density": throughput / rss if throughput is not None and rss else None,
         "cpu": cpu,
-        # Cores busy per 2000 req/s, extrapolating CPU % linearly with throughput so
-        # runs at a different --target-rate stay comparable to the 2000 req/s baseline.
-        "cpu_cores_adjusted": cpu / 100 / throughput * 2000 if cpu is not None and throughput else None,
+        # Cores busy per 1000 req/s, extrapolating CPU % linearly with throughput so
+        # runs at a different --target-rate stay comparable to a common baseline.
+        "cpu_cores_adjusted": cpu / 100 / throughput * 1000 if cpu is not None and throughput else None,
         "mean": avg(means),
         "p50": avg(p50s),
         "p90": avg(p90s),
