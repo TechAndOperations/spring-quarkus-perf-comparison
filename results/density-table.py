@@ -132,6 +132,7 @@ def build_row(runtime, metrics, logs_dir):
 
     throughput = load.get("avThroughput")
     rss = avg(rss_samples)
+    cpu = avg(cpu_samples)
 
     return {
         "runtime": runtime,
@@ -139,7 +140,10 @@ def build_row(runtime, metrics, logs_dir):
         "throughput": throughput,
         "rss": rss,
         "density": throughput / rss if throughput is not None and rss else None,
-        "cpu": avg(cpu_samples),
+        "cpu": cpu,
+        # Cores busy per 2000 req/s, extrapolating CPU % linearly with throughput so
+        # runs at a different --target-rate stay comparable to the 2000 req/s baseline.
+        "cpu_cores_adjusted": cpu / 100 / throughput * 2000 if cpu is not None and throughput else None,
         "mean": avg(means),
         "p50": avg(p50s),
         "p90": avg(p90s),
@@ -157,7 +161,8 @@ def format_row(row):
 
     return (
         f"| {row['runtime']} | {row['xmx']} | {fmt(row['throughput'], 1)} | {fmt(row['rss'], 1)} | "
-        f"{fmt(row['density'])} | {fmt(row['cpu'], 1)} | {fmt(row['mean'])} | {fmt(row['p50'])} | "
+        f"{fmt(row['density'])} | {fmt(row['cpu'], 1)} | {fmt(row['cpu_cores_adjusted'])} | "
+        f"{fmt(row['mean'])} | {fmt(row['p50'])} | "
         f"{fmt(row['p90'])} | {fmt(row['p99'])} | {fmt(row['p999'])} | {fmt(row['p9999'])} | "
         f"{fmt(row['max'])} | {row['session_limit']} |"
     )
@@ -179,11 +184,11 @@ def main():
 
     header = (
         "| Runtime | Xmx | Throughput avg (req/s) | RSS avg (MB) | Density (req/s per MB) | "
-        "CPU avg (%) | Mean latency (ms) | p50 (ms) | p90 (ms) | p99 (ms) | p99.9 (ms) | "
-        'p99.99 (ms) | Max (ms) | "Exceeded session limit" occurrences |'
+        "CPU avg (%) | CPU cores (Adjusted) | Mean latency (ms) | p50 (ms) | p90 (ms) | p99 (ms) | "
+        'p99.9 (ms) | p99.99 (ms) | Max (ms) | "Exceeded session limit" occurrences |'
     )
     print(header)
-    print("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
+    print("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
     for runtime in runtimes:
         print(format_row(build_row(runtime, metrics, logs_dir)))
 
