@@ -6,6 +6,7 @@ import { Store } from './domain/store.entity';
 import { StoreFruitPrice } from './domain/store-fruit-price.entity';
 import { HealthController } from './health/health.controller';
 import { FruitRepository } from './repository/fruit.repository';
+import { StoreCache } from './repository/store.cache';
 import { FruitController } from './rest/fruit.controller';
 import { FruitService } from './service/fruit.service';
 
@@ -32,6 +33,6 @@ import { FruitService } from './service/fruit.service';
     TypeOrmModule.forFeature([Fruit, Store, StoreFruitPrice])
   ],
   controllers: [FruitController, HealthController],
-  providers: [FruitService, FruitRepository]
+  providers: [FruitService, FruitRepository, StoreCache]
 })
 export class AppModule {}

@@ -105,11 +105,17 @@ Read these before drawing conclusions from a head-to-head run.
   [`main.yml`](../scripts/perf-lab/main.yml) reads a single PID and would under-report worker
   memory, and `kill -15` could orphan workers.
 - **Query shapes differ even though responses are identical.** In `orm` mode, `FruitRepository`
-  joins `storePrices` → `store` in one statement via TypeORM's `find({ relations })`. The Java
-  module instead relies on a lazy `@OneToMany`, an EAGER `@ManyToOne` with `FetchMode.SELECT`, and
-  Hibernate's second-level cache on `Store` — several statements per request in exchange for
-  cache hits. `sql` mode (`fruit-rows.ts`) uses the same single hand-written join as `rust-sql`
-  and `go-sql`. Each shape is its own module's idiomatic default, not a bug.
+  joins `fruits` -> `store_fruit_prices` in one statement (`store` deliberately left out of that
+  join) and resolves each price's `store` from [`StoreCache`](src/repository/store.cache.ts) - a
+  small hand-rolled in-process cache, since TypeORM has no entity-level second-level cache. The
+  Java module relies on a lazy `@OneToMany`, an EAGER `@ManyToOne` with `FetchMode.SELECT`, and
+  Hibernate's second-level cache on `Store` - several statements per request, with `Store` reads
+  served from a cache instead of
+  the database. One asymmetry is deliberate: no endpoint writes a `Store`, so `StoreCache` has no
+  invalidation path, unlike Hibernate's `NONSTRICT_READ_WRITE` strategy, which exists for a write
+  path this API never exercises. `sql` mode (`fruit-rows.ts`) uses the same single hand-written
+  join as `rust-sql` and `go-sql` and is unaffected by any of this - it never hydrates entities.
+  Each shape is its own module's idiomatic default, not a bug.
 - **Sequence-generated ids are explicit.** `fruits.id` has no `DEFAULT`, so the repository draws
   from `fruits_seq` before inserting, exactly as Hibernate's `GenerationType.SEQUENCE` with
   `allocationSize = 1` does.

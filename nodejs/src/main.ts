@@ -6,7 +6,6 @@ import './compile-cache';
 import './tracing';
 import 'reflect-metadata';
 
-import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { logs, SeverityNumber } from '@opentelemetry/api-logs';
 
@@ -18,9 +17,20 @@ const PORT = Number(process.env.PORT || 8080);
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, { logger: false });
 
-  app.useGlobalPipes(new ValidationPipe({ transform: true }));
+  // Express defaults both on: a weak ETag is a SHA-1 over the full response body computed on
+  // every request, and X-Powered-By is a header Quarkus/RESTEasy never sends. Neither has a
+  // counterpart in the module this is benchmarked against.
+  const httpAdapter = app.getHttpAdapter().getInstance();
+  httpAdapter.set('etag', false);
+  httpAdapter.disable('x-powered-by');
 
   await app.listen(PORT, '0.0.0.0');
+
+  // Node's http.Server defaults keepAliveTimeout to 5s; a benchmark load phase reuses the same
+  // connections far longer than that, so without this connections get recycled mid-run.
+  const httpServer = app.getHttpServer();
+  httpServer.keepAliveTimeout = 120_000;
+  httpServer.headersTimeout = 121_000;
 
   // `performance.now()` is milliseconds since process start, so this is the whole startup cost.
   // The wording mirrors Quarkus/Spring so the pipeline's logFileStartedRegex

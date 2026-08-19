@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Res } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Res, ValidationPipe } from '@nestjs/common';
 import { Response } from 'express';
 
 import { FruitDTO } from '../dto/fruit.dto';
@@ -33,9 +33,11 @@ export class FruitController {
     response.status(HttpStatus.OK).json(fruit);
   }
 
+  // Validated here rather than through a global pipe, matching the Java module which only
+  // validates the POST body (`@Valid`) - the GET endpoints pay no pipe-dispatch cost.
   @Post()
   @HttpCode(HttpStatus.OK)
-  addFruit(@Body() fruit: FruitDTO): Promise<FruitDTO> {
+  addFruit(@Body(new ValidationPipe({ transform: true })) fruit: FruitDTO): Promise<FruitDTO> {
     return this.fruitService.createFruit(fruit);
   }
 }
