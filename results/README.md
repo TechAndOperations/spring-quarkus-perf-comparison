@@ -245,8 +245,8 @@ adds (networking, storage, redundancy, the fact that you can't actually rent 0.0
 | go-orm | — | 3370.0 | 53.2 | 147.5 | $12.02 | 185.25 | 0 |
 | rust-orm | — | 2394.7 | 19.4 | 112.8 | $12.91 | 124.08 | 0 |
 | spring4-native | 512m | 1736.1 | 406.3 | 186.6 | $30.01 | 637.53 | 0 |
-| nodejs-sql | — | 1143.7 | 211.4 | 112.7 | $27.44 | 299.89 | 0 |
-| nodejs-orm | — | 689.8 | 224.2 | 118.7 | $47.92 | 496.33 | 0 |
+| nodejs-sql | — | 1314.2 | 199.0 | 110.6 | $23.42 | 269.13 | 0 |
+| nodejs-orm | — | 919.8 | 207.8 | 116.8 | $35.31 | 357.91 | 0 |
 
 ### Density (open loop)
 
