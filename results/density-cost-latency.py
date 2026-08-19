@@ -60,9 +60,9 @@ ROWS = [
     ("spring4-virtual", 16.02, 1.98, 14.33, 76.94, "-Xmx 128m"),
     ("go-orm", 16.29, 13.70, 87.47, 167.95, "—"),
     ("quarkus3-native", 18.42, 2.50, 21.23, 46.75, "-Xmx 64m"),
+    ("nodejs-sql", 27.15, 2.75, 137.54, 154.66, "target-rate 900"),
     ("spring4-native", 31.47, 6.83, 92.97, 168.12, "-Xmx 256m, target-rate 1500"),
-    ("nodejs-sql", 35.17, 2.03, 28.18, 77.07, "-Xmx 384m, target-rate 500"),
-    ("nodejs-orm", 49.79, 3.66, 249.91, 284.51, "target-rate 500"),
+    ("nodejs-orm", 36.70, 3.47, 209.72, 227.54, "target-rate 700"),
 ]
 
 H = M["t"] + len(ROWS) * ROW_H + 110
