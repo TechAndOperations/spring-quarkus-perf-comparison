@@ -14,7 +14,7 @@ until the next run — hence this archive.
 | GraalVM CE | 25.0.2 |
 | Quarkus | 3.38.1 |
 | Spring Boot | 4.1.0 |
-| Node.js | 22.22.1 |
+| Node.js | 24.16.0 |
 | Go | 1.26.0 |
 | Rust | 1.97.1 |
 
