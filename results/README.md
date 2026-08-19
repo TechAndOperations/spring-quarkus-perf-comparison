@@ -276,7 +276,7 @@ MALLOC_ARENA_MAX=2 ./run-benchmarks.sh \
 
 | Runtime | Xmx | Throughput avg (req/s) | RSS avg (MB) | CPU avg (%) | Monthly cost (1000 req/s) | Mean latency (ms) | p50 (ms) | p90 (ms) | p99 (ms) | p99.9 (ms) | p99.99 (ms) | Max (ms) | "Exceeded session limit" occurrences |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| quarkus3-virtual | 48m | 2004.9 | 239.0 | 92.8 | $12.97 | 2.11 | 1.79 | 2.91 | 7.17 | 25.41 | 34.15 | 39.85 | 0 |
+| quarkus3-virtual | 64m | 3504.0 | 260.2 | 121.0 | $9.63 | 3.81 | 2.24 | 5.18 | 46.62 | 80.92 | 92.89 | 96.99 | 2 |
 | rust-orm | — | 1997.8 | 25.7 | 94.7 | $13.01 | 15.12 | 4.98 | 50.90 | 111.28 | 163.58 | 169.69 | 173.71 | 1 |
 | nodejs-sql | — | 1995.6 | 303.9 | 92.8 | $13.11 | 6.17 | 2.17 | 11.27 | 73.97 | 92.01 | 101.19 | 108.70 | 1 |
 | spring4-virtual | 128m | 1994.1 | 407.8 | 113.0 | $16.02 | 2.73 | 1.98 | 3.59 | 14.33 | 76.94 | 113.42 | 124.69 | 0 |
@@ -291,6 +291,22 @@ MALLOC_ARENA_MAX=2 ./run-benchmarks.sh \
 
 The two costs paid before serving anything at all, crossed on a scatter rather than laid out
 as two series — different units on the same chart would force a dual axis.
+
+Same one-point-per-runtime, median-TTFR-run data as the chart above. Monthly cost here
+is RAM-only (no CPU, no throughput normalization): a startup RSS is paid whether or not
+the runtime is serving anything, so this just prices holding that RSS in memory for a
+month at Azure's ~$0.0035/GB RAM-hour (×730 hours/month) - unlike the Monthly cost
+columns elsewhere in this README, which price serving load at a target rate.
+
+| Runtime | Xmx | Time to first request (ms) | RSS (MB) | Monthly cost ($) |
+|---|---|---|---|---|
+| rust-orm | — | 43 | 10 | $0.03 |
+| go-orm | — | 51 | 29 | $0.07 |
+| quarkus3-native | 64m | 111 | 99 | $0.25 |
+| spring4-native | 384m | 1 011 | 274 | $0.68 |
+| nodejs-orm | — | 1 698 | 151 | $0.38 |
+| quarkus3-virtual | 384m | 3 339 | 258 | $0.64 |
+| spring4-virtual | 512m | 9 045 | 446 | $1.11 |
 
 ### Build performance
 
