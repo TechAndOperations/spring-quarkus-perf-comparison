@@ -61,6 +61,11 @@ help() {
   echo "                                                              Default: ${JVM_MEMORY}"
   echo "  --node-args <NODE_ARGS>                                 Any runtime Node.js args to be passed to the Node.js apps"
   echo "                                                              Default: ${NODE_ARGS}"
+  echo "  --node-home <NODE_HOME>                                 Path to a locally installed Node.js distribution (e.g. an nvm version directory)"
+  echo "                                                              Pass an empty string to fall back to 'node' resolved via PATH instead -"
+  echo "                                                              not recommended, since qDup's steps run in non-interactive shells that"
+  echo "                                                              don't source ~/.bashrc, so an interactive 'nvm use' has no effect on them"
+  echo "                                                              Default: ${NODE_HOME}"
   echo "  --native-quarkus-build-options <NATIVE_QUARKUS_OPTS>    Native build options to be passed to Quarkus native build process"
   echo "  --native-spring3-build-options <NATIVE_SPRING3_OPTS>    Native build options to be passed to Spring 3.x native build process"
   echo "  --native-spring4-build-options <NATIVE_SPRING4_OPTS>    Native build options to be passed to Spring 4.x native build process"
@@ -187,6 +192,7 @@ print_values() {
   echo "  USE_CONTAINER_HOST_NETWORK: $USE_CONTAINER_HOST_NETWORK"
   echo "  JVM_ARGS: $JVM_ARGS"
   echo "  NODE_ARGS: $NODE_ARGS"
+  echo "  NODE_HOME: $NODE_HOME"
   echo "  EXTRA_QDUP_ARGS: $EXTRA_QDUP_ARGS"
   echo "  OUTPUT_DIR: $OUTPUT_DIR"
   echo "  DESCRIPTION: '${DESCRIPTION}'"
@@ -297,6 +303,7 @@ ${JBANG_CMD} io.hyperfoil.tools:qDup:0.11.2 \
     -S config.quarkus.native_build_options="${NATIVE_QUARKUS_BUILD_OPTIONS}" \
     -S config.jvm.args="${JVM_ARGS}" \
     -S config.node.args="${NODE_ARGS}" \
+    -S config.node.home="${NODE_HOME}" \
     -S config.profiler.name=${PROFILER} \
     -S config.resources.app_cpus="$(count_cpus "${CPUS_APP}")" \
     -S config.resources.cpu.app="${CPUS_APP}" \
@@ -380,6 +387,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   USE_CONTAINER_HOST_NETWORK=false
   JVM_ARGS="-XX:+UseParallelGC"
   NODE_ARGS="--max-old-space-size=512"
+  NODE_HOME="$HOME/.nvm/versions/node/v24.16.0"
   EXTRA_QDUP_ARGS=""
   OUTPUT_DIR="/tmp"
 
@@ -408,6 +416,11 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
 
       --node-args)
         NODE_ARGS="$2"
+        shift 2
+        ;;
+
+      --node-home)
+        NODE_HOME="$2"
         shift 2
         ;;
 

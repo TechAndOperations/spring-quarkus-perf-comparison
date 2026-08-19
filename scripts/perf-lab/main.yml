@@ -30,6 +30,9 @@ states:
 
   # Runtime args for Node.js runtimes. --max-old-space-size is the closest analogue of -Xmx.
   config.node.args: --max-old-space-size=512
+  # Path to a Node.js install directory (e.g. an nvm version dir), used as
+  # <config.node.home>/bin/node instead of bare `node` - see BASE_NODE_CMD below.
+  config.node.home: #/path/to/node
 
   config.quarkus.native_build_options: #-Dquarkus.native.native-image-xmx=<maximum_memory>
   config.springboot3.native_build_options:
@@ -61,7 +64,10 @@ states:
   PAUSE_TIME: 5
   PROFILER_JVM_ARGS:
   BASE_JAVA_CMD: ${{APP_CMD_PREFIX}} java ${{config.jvm.memory}} ${{config.jvm.args}} ${{PROFILER_JVM_ARGS}}
-  BASE_NODE_CMD: ${{APP_CMD_PREFIX}} node ${{config.node.args}}
+  # `node` resolved bare via PATH won't reliably pick up an nvm-managed version: qDup's steps
+  # run in non-interactive shells that don't source ~/.bashrc, so an interactive `nvm use` has
+  # no effect on them. Pass --node-home to pin an absolute binary instead.
+  BASE_NODE_CMD: "${{APP_CMD_PREFIX}} ${{= '${{config.node.home}}' ? '${{config.node.home}}/bin/node' : 'node' }} ${{config.node.args}}"
   TESTS : [measure-time-to-first-request, measure-rss, run-load-test]
   RUNTIMES: [quarkus3-jvm, quarkus3-virtual, quarkus3-native, spring3-jvm, spring3-virtual, spring3-native, spring4-jvm, spring4-virtual, spring4-native]
   TARGET_URL: http://localhost:8080/fruits
@@ -460,6 +466,10 @@ scripts:
   # installs from the lockfile, keeping dependency resolution out of the measured build time.
   update-node-version:
     - log: "No framework version pinning for Node.js runtimes"
+    # Logs the exact binary BASE_NODE_CMD will invoke (see its definition above), so a run's
+    # log always records which Node actually ran it rather than relying on whatever the
+    # launching shell's PATH happened to resolve.
+    - sh: "${{= '${{config.node.home}}' ? '${{config.node.home}}/bin/node' : 'node' }} --version"
     - sh: "[ -d ${{DIR}} ] && echo true || echo false"
       then:
         - regex: "false"
