@@ -57,12 +57,12 @@ def hbar(x0, y, length, fill, tip, h=BAR_H):
 ROWS = [
     ("quarkus3-virtual", 12.97, 1.79, 7.17, 25.41, "-Xmx 48m"),
     ("rust-orm", 13.01, 4.98, 111.28, 163.58, "—"),
+    ("nodejs-sql", 13.11, 2.17, 73.97, 92.01, "target-rate 2000"),
     ("spring4-virtual", 16.02, 1.98, 14.33, 76.94, "-Xmx 128m"),
     ("go-orm", 16.29, 13.70, 87.47, 167.95, "—"),
     ("quarkus3-native", 18.42, 2.50, 21.23, 46.75, "-Xmx 64m"),
-    ("nodejs-sql", 27.15, 2.75, 137.54, 154.66, "target-rate 900"),
+    ("nodejs-orm", 23.66, 2.02, 30.02, 57.06, "target-rate 1000"),
     ("spring4-native", 31.47, 6.83, 92.97, 168.12, "-Xmx 256m, target-rate 1500"),
-    ("nodejs-orm", 36.70, 3.47, 209.72, 227.54, "target-rate 700"),
 ]
 
 H = M["t"] + len(ROWS) * ROW_H + 110
