@@ -32,6 +32,25 @@ DEFAULT_LOGS_DIR = Path.home() / "spring-quarkus-perf-comparison" / "logs"
 
 NS_PER_MS = 1_000_000
 
+VCPU_HOUR_RATE = 0.0375
+RAM_GB_HOUR_RATE = 0.0035
+HOURS_PER_MONTH = 730
+TARGET_RATE = 1000
+
+
+def monthly_cost(cpu_pct, rss_mb, throughput):
+    """Scales this run's CPU and RSS linearly to a 1000 req/s target and prices the
+    result against Azure's Dadsv5/Eadsv5 on-demand Linux rate - see "Density (open
+    loop)" in README.md for the reasoning. Mirrors peak-throughput-table.py's version
+    of this function, kept in sync manually since each file is a standalone script.
+    """
+    if cpu_pct is None or rss_mb is None or not throughput:
+        return None
+    cpu_cores_at_target = cpu_pct / 100 / throughput * TARGET_RATE
+    rss_gb_at_target = rss_mb / 1024 / throughput * TARGET_RATE
+    return cpu_cores_at_target * VCPU_HOUR_RATE * HOURS_PER_MONTH + \
+        rss_gb_at_target * RAM_GB_HOUR_RATE * HOURS_PER_MONTH
+
 
 def xmx_label(metrics, runtime):
     if kind(runtime)[0] == "other":
@@ -139,11 +158,8 @@ def build_row(runtime, metrics, logs_dir):
         "xmx": xmx_label(metrics, runtime),
         "throughput": throughput,
         "rss": rss,
-        "density": throughput / rss if throughput is not None and rss else None,
         "cpu": cpu,
-        # Cores busy per 1000 req/s, extrapolating CPU % linearly with throughput so
-        # runs at a different --target-rate stay comparable to a common baseline.
-        "cpu_cores_adjusted": cpu / 100 / throughput * 1000 if cpu is not None and throughput else None,
+        "cost": monthly_cost(cpu, rss, throughput),
         "mean": avg(means),
         "p50": avg(p50s),
         "p90": avg(p90s),
@@ -161,8 +177,7 @@ def format_row(row):
 
     return (
         f"| {row['runtime']} | {row['xmx']} | {fmt(row['throughput'], 1)} | {fmt(row['rss'], 1)} | "
-        f"{fmt(row['density'])} | {fmt(row['cpu'], 1)} | {fmt(row['cpu_cores_adjusted'])} | "
-        f"{fmt(row['mean'])} | {fmt(row['p50'])} | "
+        f"{fmt(row['cpu'], 1)} | ${fmt(row['cost'])} | {fmt(row['mean'])} | {fmt(row['p50'])} | "
         f"{fmt(row['p90'])} | {fmt(row['p99'])} | {fmt(row['p999'])} | {fmt(row['p9999'])} | "
         f"{fmt(row['max'])} | {row['session_limit']} |"
     )
@@ -183,12 +198,12 @@ def main():
     runtimes = args or list(metrics["results"].keys())
 
     header = (
-        "| Runtime | Xmx | Throughput avg (req/s) | RSS avg (MB) | Density (req/s per MB) | "
-        "CPU avg (%) | CPU cores (Adjusted) | Mean latency (ms) | p50 (ms) | p90 (ms) | p99 (ms) | "
+        "| Runtime | Xmx | Throughput avg (req/s) | RSS avg (MB) | CPU avg (%) | "
+        "Monthly cost (1000 req/s) | Mean latency (ms) | p50 (ms) | p90 (ms) | p99 (ms) | "
         'p99.9 (ms) | p99.99 (ms) | Max (ms) | "Exceeded session limit" occurrences |'
     )
     print(header)
-    print("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
+    print("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
     for runtime in runtimes:
         print(format_row(build_row(runtime, metrics, logs_dir)))
 
