@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 
 import { Fruit } from '../domain/fruit.entity';
 import { FRUIT_ROWS_SELECT, FruitRow, groupFruitRows } from './fruit-rows';
+import { StoreCache } from './store.cache';
 
 /**
  * Which read implementation to use, selected by the QUERY_MODE environment variable.
@@ -27,16 +28,21 @@ export function queryMode(): FruitQueryMode {
 /**
  * Mirrors `org.acme.repository.FruitRepository` (a Panache `PanacheRepository<Fruit>`).
  *
- * In `orm` mode the read methods eagerly join `storePrices` -> `store` in one statement, which is
- * the idiomatic TypeORM equivalent of what the Java module achieves with a lazy `@OneToMany` plus
- * an EAGER `@ManyToOne` backed by Hibernate's second-level cache. See README.md for why the query
- * shapes differ even though the JSON responses are identical.
+ * In `orm` mode the read methods join `fruits` -> `store_fruit_prices` in one statement (`store`
+ * deliberately left out of that join - see `StoreFruitPrice.store` in `store-fruit-price.entity.ts`)
+ * and resolve each price's `store` from `StoreCache` instead of a relation. That is the
+ * TypeORM-idiomatic counterpart of what the Java module does with a lazy `@OneToMany` plus an
+ * EAGER `@ManyToOne` backed by Hibernate's second-level cache: the store lookups are served from
+ * an in-process cache instead of hitting the database, without adding a second round trip to get
+ * there. See README.md for why the query shapes differ even though the JSON responses are
+ * identical.
  */
 @Injectable()
 export class FruitRepository {
   constructor(
     @InjectRepository(Fruit)
-    private readonly repository: Repository<Fruit>
+    private readonly repository: Repository<Fruit>,
+    private readonly storeCache: StoreCache
   ) {}
 
   /** Panache `listAll()` - no ORDER BY, matching the Java implementation. */
@@ -67,17 +73,43 @@ export class FruitRepository {
 
   // --- orm mode (default) -------------------------------------------------------------------
 
-  private listAllOrm(): Promise<Fruit[]> {
-    return this.repository.find({
-      relations: { storePrices: { store: true } }
+  private async listAllOrm(): Promise<Fruit[]> {
+    const fruits = await this.repository.find({
+      relations: { storePrices: true }
     });
+
+    await this.hydrateStores(fruits);
+
+    return fruits;
   }
 
-  private findByNameOrm(name: string): Promise<Fruit> {
-    return this.repository.findOne({
+  private async findByNameOrm(name: string): Promise<Fruit> {
+    const fruit = await this.repository.findOne({
       where: { name },
-      relations: { storePrices: { store: true } }
+      relations: { storePrices: true }
     });
+
+    if (fruit) {
+      await this.hydrateStores([fruit]);
+    }
+
+    return fruit;
+  }
+
+  /**
+   * Resolves every `storePrices[].store` from `StoreCache` in one bulk lookup, the TypeORM
+   * counterpart of Hibernate serving the `store` association from its second-level cache. See
+   * the class doc comment and `store.cache.ts`.
+   */
+  private async hydrateStores(fruits: Fruit[]): Promise<void> {
+    const storeIds = fruits.flatMap((fruit) => fruit.storePrices.map((price) => price.storeId));
+    const stores = await this.storeCache.getByIds(storeIds);
+
+    for (const fruit of fruits) {
+      for (const price of fruit.storePrices) {
+        price.store = stores.get(price.storeId);
+      }
+    }
   }
 
   // --- sql mode ------------------------------------------------------------------------------

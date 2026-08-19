@@ -12,7 +12,13 @@ import { Store } from './store.entity';
  * column names are reused by the relations — the standard TypeORM composite-key join-entity
  * pattern. The PK is `(fruit_id, store_id)` per `scripts/dbdata/db.sql`.
  *
- * Fetch strategies match the Java entity: `store` is EAGER, `fruit` is LAZY.
+ * `store` mirrors the Java entity's `@ManyToOne(FetchType.EAGER)` + `@Fetch(FetchMode.SELECT)` +
+ * `@Cache(NONSTRICT_READ_WRITE)`: always populated, but via a cached lookup rather than a join or
+ * a per-row query. Marking it `eager: true` here would make TypeORM add it back into every join;
+ * instead `FruitRepository.hydrateStores()` populates it from `StoreCache` after loading, using
+ * `storeId` (already selected as part of the primary key, no relation load needed to get it).
+ * `store` is `undefined` on any `StoreFruitPrice` loaded outside that path. `fruit` stays LAZY,
+ * matching the Java entity - nothing in this API ever reads it.
  */
 @Entity('store_fruit_prices')
 export class StoreFruitPrice {
@@ -22,7 +28,7 @@ export class StoreFruitPrice {
   @PrimaryColumn({ name: 'store_id', type: 'bigint', transformer: numericTransformer })
   storeId: number;
 
-  @ManyToOne(() => Store, { eager: true, nullable: false })
+  @ManyToOne(() => Store, { nullable: false })
   @JoinColumn({ name: 'store_id', referencedColumnName: 'id' })
   store: Store;
 

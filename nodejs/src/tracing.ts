@@ -1,7 +1,9 @@
-import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
 import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-grpc';
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-grpc';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-grpc';
+import { HttpInstrumentation } from '@opentelemetry/instrumentation-http';
+import { PgInstrumentation } from '@opentelemetry/instrumentation-pg';
+import { RuntimeNodeInstrumentation } from '@opentelemetry/instrumentation-runtime-node';
 import { resourceFromAttributes } from '@opentelemetry/resources';
 import { BatchLogRecordProcessor } from '@opentelemetry/sdk-logs';
 import { NodeSDK } from '@opentelemetry/sdk-node';
@@ -15,9 +17,21 @@ import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from '@opentelemetry/semantic
  * Benchmarking this module without comparable instrumentation would measure a materially
  * lighter application than the JVM modules it is being compared against.
  *
- * Imported first in main.ts so the auto-instrumentations can patch http/pg/nestjs-core before
- * those modules are required. Exports OTLP/gRPC to localhost:4317 by default, which is where
- * scripts/infra.sh publishes the Grafana LGTM container.
+ * Imported first in main.ts so the instrumentations can patch http/pg before those modules are
+ * required. Exports OTLP/gRPC to localhost:4317 by default, which is where scripts/infra.sh
+ * publishes the Grafana LGTM container.
+ *
+ * Instrumentations are listed explicitly rather than via `getNodeAutoInstrumentations()`
+ * (`@opentelemetry/auto-instrumentations-node`), which `require`s all ~40 contrib
+ * instrumentations (amqplib, aws-sdk, graphql, kafkajs, mongodb, redis, socket.io, ...) up front
+ * to decide which ones to enable - pure startup cost for libraries this app never loads. `http`
+ * and `pg` are this app's actual dependencies and match the Quarkus module's HTTP server + JDBC
+ * telemetry; `runtime-node` is the analogue of Micrometer's JVM metrics (Quarkus runs with
+ * `otel.metrics.enabled: true`). Two are deliberately excluded: `express` emits a span per
+ * middleware/router layer on every request, and `nestjs-core` auto-spans every controller and
+ * provider method call - both have no counterpart in the Quarkus module's instrumentation, and
+ * `nestjs-core` would double up with the manual `withSpan()` calls already in
+ * `service/fruit.service.ts` (the `@WithSpan` equivalent), spanning the same work twice.
  *
  * Set OTEL_SDK_DISABLED=true to measure without instrumentation.
  */
@@ -27,6 +41,9 @@ if (process.env.OTEL_SDK_DISABLED !== 'true') {
       [ATTR_SERVICE_NAME]: process.env.OTEL_SERVICE_NAME || 'nodejs',
       [ATTR_SERVICE_VERSION]: '1.0'
     }),
+    // The resource is set explicitly above; the default detectors (container/host/os/process)
+    // would otherwise read cgroup files and run uname/hostname lookups for nothing.
+    resourceDetectors: [],
     sampler: new TraceIdRatioBasedSampler(Number(process.env.OTEL_TRACES_SAMPLER_ARG || 0.1)),
     traceExporter: new OTLPTraceExporter(),
     metricReader: new PeriodicExportingMetricReader({ exporter: new OTLPMetricExporter() }),
@@ -36,10 +53,9 @@ if (process.env.OTEL_SDK_DISABLED !== 'true') {
     // output, the same way the Go module does.
     logRecordProcessors: [new BatchLogRecordProcessor(new OTLPLogExporter())],
     instrumentations: [
-      getNodeAutoInstrumentations({
-        // Extremely chatty and has no analogue in the Quarkus module's instrumentation.
-        '@opentelemetry/instrumentation-fs': { enabled: false }
-      })
+      new HttpInstrumentation(),
+      new PgInstrumentation(),
+      new RuntimeNodeInstrumentation()
     ]
   });
 

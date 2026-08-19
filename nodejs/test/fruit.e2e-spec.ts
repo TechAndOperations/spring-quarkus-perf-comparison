@@ -1,4 +1,4 @@
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 
@@ -33,7 +33,6 @@ for (const mode of ['orm', 'sql']) {
       const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
 
       app = moduleRef.createNestApplication();
-      app.useGlobalPipes(new ValidationPipe({ transform: true }));
       await app.init();
     });
 
