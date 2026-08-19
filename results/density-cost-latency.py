@@ -56,7 +56,7 @@ def hbar(x0, y, length, fill, tip, h=BAR_H):
 # ascending) the table itself uses.
 ROWS = [
     ("quarkus3-virtual", 9.63, 2.24, 46.62, 80.92, "-Xmx 64m, target-rate 3500"),
-    ("rust-orm", 13.01, 4.98, 111.28, 163.58, "—"),
+    ("rust-orm", 12.72, 3.80, 21.15, 47.23, "target-rate 1800"),
     ("nodejs-sql", 13.11, 2.17, 73.97, 92.01, "target-rate 2000"),
     ("spring4-virtual", 16.02, 1.98, 14.33, 76.94, "-Xmx 128m"),
     ("go-orm", 16.29, 13.70, 87.47, 167.95, "—"),
