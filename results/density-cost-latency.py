@@ -59,8 +59,8 @@ ROWS = [
     ("rust-orm", 12.72, 3.80, 21.15, 47.23, "target-rate 1800"),
     ("nodejs-sql", 13.11, 2.17, 73.97, 92.01, "target-rate 2000"),
     ("spring4-virtual", 16.68, 1.82, 5.96, 22.19, "-Xmx 128m, target-rate 1700"),
-    ("go-orm", 17.93, 13.46, 66.24, 112.37, "target-rate 1800"),
     ("quarkus3-native", 18.42, 2.50, 21.23, 46.75, "-Xmx 64m"),
+    ("go-orm", 20.17, 12.76, 63.09, 81.09, "target-rate 1500"),
     ("nodejs-orm", 23.66, 2.02, 30.02, 57.06, "target-rate 1000"),
     ("spring4-native", 32.58, 4.05, 55.23, 94.37, "-Xmx 256m, target-rate 1300"),
 ]
