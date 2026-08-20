@@ -62,7 +62,7 @@ ROWS = [
     ("quarkus3-native", 18.42, 2.50, 21.23, 46.75, "-Xmx 64m"),
     ("go-orm", 20.17, 12.76, 63.09, 81.09, "target-rate 1500"),
     ("nodejs-orm", 23.66, 2.02, 30.02, 57.06, "target-rate 1000"),
-    ("spring4-native", 32.58, 4.05, 55.23, 94.37, "-Xmx 256m, target-rate 1300"),
+    ("spring4-native", 33.60, 3.66, 36.18, 54.61, "-Xmx 256m, target-rate 1200"),
 ]
 
 H = M["t"] + len(ROWS) * ROW_H + 110
