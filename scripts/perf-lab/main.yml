@@ -55,6 +55,11 @@ states:
   config.repo.url: https://github.com/quarkusio/spring-quarkus-perf-comparison.git
 
   config.num_iterations: 3
+  # When true, measure-build-times builds each runtime once instead of once per
+  # iteration - see its for-each below. The single build's artifact is still what
+  # every other test runs against either way; this only skips the repeat rebuilds
+  # done purely to measure build-time variance.
+  config.build.once: false
 
   APP_CMD_PREFIX: taskset --cpu-list ${{config.resources.cpu.app}}
   LOAD_GEN_CMD_PREFIX: taskset --cpu-list ${{config.resources.cpu.load_generator}}
@@ -580,7 +585,11 @@ scripts:
     - log: GraalVM Version
     - sh: $GRAALVM_HOME/bin/java -version
     - set-state: TYPE ${{RUNTIMECMD.type}}
-    - for-each: ITERATION ${{=[...Array(${{config.num_iterations}}).keys()]}}
+    # --build-once (config.build.once) trims this to a single pass: every other test
+    # runs against whichever build comes out of this loop regardless of its length,
+    # so when build-time variance isn't being measured there is nothing to gain from
+    # rebuilding --iterations times.
+    - for-each: "ITERATION ${{=[...Array(${{config.build.once}} ? 1 : ${{config.num_iterations}}).keys()]}}"
       then:
         - queue-download: ${{REPO_DIR}}/logs/build-times-${{RUNTIMECMD.name}}-${{ITERATION}}.log
         - read-state: ${{RUNTIMECMD.buildRequiresTestServices}}
