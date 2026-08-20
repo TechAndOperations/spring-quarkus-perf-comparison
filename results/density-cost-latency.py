@@ -55,10 +55,10 @@ def hbar(x0, y, length, fill, tip, h=BAR_H):
 # Transcribed from the "Density (open loop)" table in README.md, same order (cost
 # ascending) the table itself uses.
 ROWS = [
-    ("quarkus3-virtual", 9.63, 2.24, 46.62, 80.92, "-Xmx 64m, target-rate 3500"),
+    ("quarkus3-virtual", 9.67, 2.03, 9.72, 53.22, "-Xmx 128m, target-rate 3400"),
     ("rust-orm", 12.72, 3.80, 21.15, 47.23, "target-rate 1800"),
     ("nodejs-sql", 13.11, 2.17, 73.97, 92.01, "target-rate 2000"),
-    ("spring4-virtual", 16.02, 1.98, 14.33, 76.94, "-Xmx 128m"),
+    ("spring4-virtual", 16.68, 1.82, 5.96, 22.19, "-Xmx 128m, target-rate 1700"),
     ("go-orm", 17.93, 13.46, 66.24, 112.37, "target-rate 1800"),
     ("quarkus3-native", 18.42, 2.50, 21.23, 46.75, "-Xmx 64m"),
     ("nodejs-orm", 23.66, 2.02, 30.02, 57.06, "target-rate 1000"),
