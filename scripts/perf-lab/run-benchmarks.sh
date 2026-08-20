@@ -37,6 +37,10 @@ help() {
   echo "  --cpus-otel <CPUS_OTEL>                                 CPU list for the OpenTelemetry stack (e.g. 14,16,18)"
   echo "                                                              Default: ${CPUS_OTEL}"
   echo "  --description <DESCRIPTION>                             A human-readable description to be added to the run output"
+  echo "  --build-once                                             Build each runtime a single time instead of once per iteration"
+  echo "                                                              measure-build-times normally rebuilds --iterations times to measure build-time"
+  echo "                                                              variance; the cached artifact it produces is used for every other test regardless."
+  echo "                                                              Pass this to skip the repeat rebuilds when build time itself isn't being measured."
   echo "  --drop-fs-caches                                        Purge/drop OS filesystem caches between iterations"
   echo "  --extra-qdup-args <EXTRA_QDUP_ARGS>                     Any extra arguments that need to be passed to qDup ahead of the qDup scripts"
   echo "                                                              NOTE: This is an advanced option. Make sure you know what you are doing when using it."
@@ -189,6 +193,7 @@ print_values() {
   echo "  SCM_REPO_URL: $SCM_REPO_URL"
   echo "  SCM_REPO_BRANCH: $SCM_REPO_BRANCH"
   echo "  DROP_OS_FILESYSTEM_CACHES: $DROP_OS_FILESYSTEM_CACHES"
+  echo "  BUILD_ONCE: $BUILD_ONCE"
   echo "  USE_CONTAINER_HOST_NETWORK: $USE_CONTAINER_HOST_NETWORK"
   echo "  JVM_ARGS: $JVM_ARGS"
   echo "  NODE_ARGS: $NODE_ARGS"
@@ -328,6 +333,7 @@ ${JBANG_CMD} io.hyperfoil.tools:qDup:0.11.2 \
     -S config.run.description="${DESCRIPTION}" \
     -S config.run.identifier="${RUN_IDENTIFIER}" \
     -S config.run.dropOsFilesystemCaches=${DROP_OS_FILESYSTEM_CACHES} \
+    -S config.build.once=${BUILD_ONCE} \
     -S config.run.useContainerHostNetwork=${USE_CONTAINER_HOST_NETWORK} \
     -S env.run.host.user=${USER} \
     -S env.run.host.target=${target} \
@@ -384,6 +390,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   TARGET_RATE="2000"
   WAIT_TIME="20"
   DROP_OS_FILESYSTEM_CACHES=false
+  BUILD_ONCE=false
   USE_CONTAINER_HOST_NETWORK=false
   JVM_ARGS="-XX:+UseParallelGC"
   NODE_ARGS="--max-old-space-size=512"
@@ -431,6 +438,11 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
 
       --drop-fs-caches)
         DROP_OS_FILESYSTEM_CACHES=true
+        shift
+        ;;
+
+      --build-once)
+        BUILD_ONCE=true
         shift
         ;;
 
