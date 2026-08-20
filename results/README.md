@@ -250,7 +250,7 @@ adds (networking, storage, redundancy, the fact that you can't actually rent 0.0
 
 ### Density (open loop)
 
-Open-loop `constantRate` scenario (2000 req/s target), with `MALLOC_ARENA_MAX=2`
+Open-loop `constantRate` scenario, with `MALLOC_ARENA_MAX=2`
 exported before launch. RSS and CPU here come from `pidstat -u -w -t -r`, sampled every
 second and averaged over the load-test window only (warmup and cooldown excluded).
 
