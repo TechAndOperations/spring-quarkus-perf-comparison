@@ -57,7 +57,7 @@ def hbar(x0, y, length, fill, tip, h=BAR_H):
 ROWS = [
     ("quarkus3-virtual", 9.67, 2.03, 9.72, 53.22, "-Xmx 128m, target-rate 3400"),
     ("rust-orm", 12.72, 3.80, 21.15, 47.23, "target-rate 1800"),
-    ("nodejs-sql", 13.11, 2.17, 73.97, 92.01, "target-rate 2000"),
+    ("nodejs-sql", 15.67, 1.67, 26.61, 47.97, "target-rate 1400"),
     ("spring4-virtual", 16.68, 1.82, 5.96, 22.19, "-Xmx 128m, target-rate 1700"),
     ("quarkus3-native", 18.42, 2.50, 21.23, 46.75, "-Xmx 64m"),
     ("go-orm", 20.17, 12.76, 63.09, 81.09, "target-rate 1500"),
