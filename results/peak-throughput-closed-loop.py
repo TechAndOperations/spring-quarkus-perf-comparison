@@ -148,10 +148,16 @@ def build():
             unit = {0: "req/s", 1: "$", 2: "ms"}[i]
             tip = f"{rt} · {note} · {label} {v:g} {unit}"
             x = px(v)
-            o.append(hbar(px0, y, x - px0, f"var(--{fam})", tip))
-            # The bar carries family (colour) and magnitude; a marker at its tip adds
-            # execution mode (shape), the second half of this repo's composite encoding.
-            o.append(marker(shape, x, y, f"var(--{fam})", surface, tip, r=5.0))
+            if i == 2:
+                # Max latency is a single noisy sample (see the README caveat), not a
+                # magnitude worth anchoring to zero with a bar - a bare point reads as
+                # the one-off reading it is.
+                o.append(marker(shape, x, y, f"var(--{fam})", surface, tip, r=5.0))
+            else:
+                o.append(hbar(px0, y, x - px0, f"var(--{fam})", tip))
+                # The bar carries family (colour) and magnitude; a marker at its tip adds
+                # execution mode (shape), the second half of this repo's composite encoding.
+                o.append(marker(shape, x, y, f"var(--{fam})", surface, tip, r=5.0))
 
     ly = bottom + 44
     lx = M["l"]
