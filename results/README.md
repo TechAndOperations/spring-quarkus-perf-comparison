@@ -52,16 +52,20 @@ three.
 
 | Stack | SQL queries | Strategy | L2 cache |
 |---|---|---|---|
-| TypeORM (`nodejs-orm`) | **1** | `find({ relations })` — a single join spanning the three tables, deduplicated in memory | no |
+| TypeORM (`nodejs-orm`) | **2 cold, 1 warm** | `find({ relations: { storePrices: true } })` joins `fruits`→`store_fruit_prices` only; `store` is resolved from an in-process cache, with one bulk query on a cache miss | **yes** — hand-rolled `StoreCache` |
 | SeaORM (`rust-orm`) | **2** | `fruit::find()`, then `find_also_related(store)`, which joins prices and stores | no |
 | Hibernate (Quarkus, Spring) | **3 cold, 2 warm** | lazy collection loaded in a batch (`where fruit_id = any (?)`), then the stores | **yes** — `Store` is `@Cacheable` |
 | GORM (`go-orm`) | **3** | `Preload("StorePrices.Store")` — one query per relationship level | no |
 
-Hibernate is the only one with a second-level cache: after warmup, stores are served from
-Caffeine and the third query disappears. That's a real and legitimate advantage under load,
-but it has no equivalent in the other three ORMs.
+Hibernate and TypeORM are the two with a cache for `Store`: after warmup Hibernate serves it
+from Caffeine and TypeORM from `StoreCache`, and the extra query disappears in both cases.
+That's a real and legitimate advantage under load, but it has no equivalent in SeaORM or
+GORM.
 
-All four counts are now **measured** — read off real traces in Tempo.
+All counts are now **measured** — read off real traces in Tempo. TypeORM's row was verified
+2026-08-21 against a live trace: a cold request shows two `pg.query:SELECT fruits` spans (the
+join, then `StoreCache`'s bulk lookup) plus one-time connection-pool spans that don't recur
+once the pool is warm; a warm request shows exactly one.
 
 ### Telemetry
 
@@ -72,19 +76,25 @@ signals nor the same depth.
 |---|---|---|---|---|
 | `springboot4` | ✅ | 5 | ✅ 135 series | ✅ |
 | `quarkus3-virtual` | ✅ | 4 (5 cold) | ✅ 132 series | ✅ |
-| `nodejs` | ✅ | **10** | ✅ 109 series | ✅ |
+| `nodejs` | ✅ | **3** (4 cold) | ✅ 117 series | ✅ |
 | `rust` | ✅ | 4 | ✅ 28 series | ✅ |
 | `go` | ✅ | 5 | ✅ 71 series | ✅ |
 
-The span gap has narrowed a lot: Rust's four spans are the `axum-tracing-opentelemetry` HTTP
-middleware span, the application span, and one `sea_orm.query_all` per query SeaORM issues
-(two, from `sea-orm`'s own `tracing-spans` feature - no separate instrumentation crate). Go's
-five and Node's ten still cover more ground (per-middleware spans, ORM-internal steps),
-and Rust's metrics remain the shallowest in *kind*, not just count: its 28 series are Tokio
-runtime gauges (worker count, queue depth, busy time) from
-`opentelemetry-instrumentation-tokio`, not request- or database-level metrics like the other
-stacks' 71-135. **The cost of observability is therefore still not fully comparable across
-stacks**.
+Each stack's spans come from a different slice of its instrumentation. Rust's four are the
+`axum-tracing-opentelemetry` HTTP middleware span, the application span, and one
+`sea_orm.query_all` per query SeaORM issues (two, from `sea-orm`'s own `tracing-spans`
+feature - no separate instrumentation crate). Node's three are the `http` instrumentation's
+`GET` span, one manual application span, and one `pg.query` span for the join; a cold request
+adds a second `pg.query` span for `StoreCache`'s bulk lookup on a cache miss, plus one-time
+connection-pool spans that don't recur once the pool is warm. Go's five cover the most
+ground of the three (per-middleware spans, ORM-internal steps).
+
+Metrics depth varies independently of span count. Rust's 28 series are the shallowest in
+*kind*, not just count: they're Tokio runtime gauges (worker count, queue depth, busy time)
+from `opentelemetry-instrumentation-tokio`, not request- or database-level metrics like the
+other stacks' 71-135. Node's 117 include per-request HTTP/DB histograms alongside
+`runtime-node`'s event-loop and V8 heap/GC metrics. **The cost of observability is therefore
+still not fully comparable across stacks**.
 
 Getting Rust's metrics up to request/connection-pool depth would need `sqlx-otel` on the
 `sql` path specifically (`QUERY_MODE=sql`, not the default `orm` one) - it cannot see the
