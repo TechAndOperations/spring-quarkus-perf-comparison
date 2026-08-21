@@ -318,6 +318,16 @@ columns elsewhere in this README, which price serving load at a target rate.
 | quarkus3-virtual | 384m | 3 339 | 258 | $0.64 |
 | spring4-virtual | 512m | 9 045 | 446 | $1.11 |
 
+`quarkus3-virtual` and `spring4-virtual`'s time to first request is expected to improve a lot
+once Project Leyden's AOT (ahead-of-time) compilation is usable: both `quarkus3-leyden` and
+`spring4-leyden` runtimes already exist in `run-benchmarks.sh` for when that's worth
+re-measuring. It isn't yet - per
+[Quarkus's own writeup](https://quarkus.io/blog/when-the-jit-cant-keep-up/):
+
+> Leyden warmup in JDK 25 is affected by a compilation policy bug. Until this is fixed, and
+> until AOT Code Compilation (JEP draft 8335368) ships, Leyden warmup numbers should not be
+> taken as representative. Virtual threads can recover the lost throughput.
+
 ### Build performance
 
 Average build time per runtime, across every archived 2-core run regardless of `-Xmx`
