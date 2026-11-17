@@ -8,7 +8,8 @@ Density combines three sources the pipeline never merges on its own:
     for latencies and the load-test phase's start/end time
   - the per-iteration pidstat log (logs/pidstat-<runtime>-<iteration>.log, needs `-r` for
     RSS - see main.yml's monitor-processes) for RSS and %CPU, averaged over just the
-    load-test window so warmup/cooldown samples don't pull the numbers around
+    load-test window so warmup/cooldown samples don't pull the numbers around (CPU also
+    drops the window's first CPU_SKIP_SECONDS, see that constant)
 
 Usage:
 
@@ -22,7 +23,7 @@ first with archive.py if the run also needs to survive past the next one.
 import glob
 import json
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from _chartlib import kind
@@ -31,6 +32,13 @@ DEFAULT_METRICS = Path("/tmp/metrics.json")
 DEFAULT_LOGS_DIR = Path.home() / "spring-quarkus-perf-comparison" / "logs"
 
 NS_PER_MS = 1_000_000
+
+# pidstat's first CPU samples of the load-test window catch the pause->load transition and
+# spike to 50-180% for every runtime, regardless of the target rate. Over 30 one-second
+# samples that's noise at a few thousand req/s, but at 50-100 req/s it can double the
+# measured CPU (quarkus3-native at 50 req/s: 14.6% with them, 7.8% without), so they're
+# dropped from the CPU average. RSS is a peak and isn't affected the same way.
+CPU_SKIP_SECONDS = 2
 
 VCPU_HOUR_RATE = 0.0375
 RAM_GB_HOUR_RATE = 0.0035
@@ -84,7 +92,8 @@ def pidstat_stats(logs_dir, runtime, iteration, start, end):
 
     RSS is the peak, not the average: a mean would blur out the load phase's actual
     memory ceiling, which is what "Density" is meant to compare against throughput. CPU
-    stays an average since there's no equivalent single peak worth isolating there.
+    stays an average since there's no equivalent single peak worth isolating there, but
+    skips the window's first CPU_SKIP_SECONDS (see the constant for why).
 
     pidstat -u -w -t -r cycles through separate tables every second - identified here by
     field count (10 for the -r/RSS table, 11 for the -u/CPU table) rather than by command
@@ -94,6 +103,8 @@ def pidstat_stats(logs_dir, runtime, iteration, start, end):
     path = logs_dir / f"pidstat-{runtime}-{iteration}.log"
     if not path.exists():
         return None, None
+    cpu_start = (datetime.strptime(start, "%H:%M:%S") +
+                 timedelta(seconds=CPU_SKIP_SECONDS)).strftime("%H:%M:%S")
     rss_samples, cpu_samples = [], []
     for line in path.read_text().splitlines():
         fields = line.split()
@@ -103,7 +114,7 @@ def pidstat_stats(logs_dir, runtime, iteration, start, end):
             continue
         if len(fields) == 10:
             rss_samples.append(float(fields[7]) / 1024)
-        elif len(fields) == 11:
+        elif len(fields) == 11 and fields[0] >= cpu_start:
             cpu_samples.append(float(fields[8]))
     rss_max = max(rss_samples) if rss_samples else None
     cpu_avg = sum(cpu_samples) / len(cpu_samples) if cpu_samples else None
