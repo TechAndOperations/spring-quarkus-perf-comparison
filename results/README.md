@@ -347,6 +347,135 @@ takes measurably longer.
 | spring4-native | 4 | 523.7 |
 <!-- build-times:end -->
 
+## Density and Cost - November 2026
+
+How the cost of serving one million requests changes with the load, and where each runtime stops
+being able to take more. Same application, same PostgreSQL, same `GET /fruits` endpoint as
+everywhere else in this document, but measured on a **common grid of request rates** instead of one
+target rate per runtime.
+
+### What was measured
+
+- **Open-loop density**: a Hyperfoil `constantRate` scenario sends requests at a fixed rate without
+  waiting for responses, so a runtime that falls behind sees its queue grow and its p99 show it. Each
+  measurement is 2 minutes of warmup, a 30-second pause, then **30 seconds measured**, repeated for
+  **3 iterations**. The application is built once per run and restarted for each iteration.
+- **Rates**: 10, 50, 100, 250 and 500 req/s (low load), then 750, 1000 and 1500 req/s and up in steps of 500,
+  until the runtime stops passing. 1250 req/s was added for Node.js, whose limit lies between 1000 and
+  1500 req/s.
+- **Validation rule**: a rate is validated only if **every one of the 3 iterations** has a **p99 below
+  50 ms** and the run delivers **at least 95% of the target throughput**. One bad iteration out of three
+  fails the step. When a step failed or looked borderline it was repeated, and **the best attempt is
+  kept**; a rate that passed once stays validated even if it failed in an earlier attempt, and the
+  **optimum** of a runtime is its highest validated rate. Close to the limit the same step can pass or
+  fail from one attempt to the next on this machine (see *Known caveats*), which is why the best attempt
+  is kept.
+- **Setup**: 2 cores pinned for the application, `MALLOC_ARENA_MAX=2`, Quarkus 3.40.1.1, Spring Boot 4.1.2.
+  JVM runtimes (quarkus3-virtual, spring4-virtual): JDK 27 (Temurin 27.0.0.0+35), `-Xmx512m -Xms10m`,
+  `-XX:+UseParallelGC -XX:MinHeapFreeRatio=10 -XX:MaxHeapFreeRatio=20 -XX:GCTimeRatio=4
+  -XX:AdaptiveSizePolicyWeight=90 -XX:+UnlockExperimentalVMOptions -XX:TrimNativeHeapInterval=5000`
+  (the UBI flags). quarkus3-native: GraalVM CE 25.0.2, `-Xmx64m`. nodejs-orm: Node.js 24.16.0,
+  `--max-old-space-size=512`.
+- **Cost**: CPU is the average over the measured window, **minus its first 2 seconds** (they contain a
+  spike when load resumes after the pause, which would distort the very low rates), and RSS is the peak
+  of the window. The price is the monthly cost of that CPU and RSS at the Azure on-demand Linux rates used
+  elsewhere in this document, **$0.0375 per vCPU-hour and $0.0035 per GB-hour of RAM** (730 hours per
+  month), divided by the requests served in that month: `(cores x $0.0375 + GB x $0.0035) x 730 /
+  (req/s x 2.628)`, which is the price **per 1 million requests** (2.628 million requests per month for each
+  req/s of sustained load).
+
+### Cost per million requests
+
+Prices are in USD per 1 million requests. In every row the percentage in parentheses is the **increase
+over the cheapest runtime of that row** (a factor like ×2.4 once it exceeds +100%); the cheapest one is in
+bold.
+
+| Request rate (req/s) | quarkus3-native | quarkus3-virtual | spring4-virtual | nodejs-orm |
+|---|---|---|---|---|
+| 10 | **0.0319** | 0.0491 (+54 %) | 0.0635 (+99 %) | 0.0511 (+60 %) |
+| 50 | **0.0177** | 0.0212 (+20 %) | 0.0242 (+37 %) | 0.0235 (+33 %) |
+| 100 | 0.0169 (+8 %) | **0.0157** | 0.0181 (+15 %) | 0.0168 (+7 %) |
+| 250 | 0.0136 (+19 %) | **0.0114** | 0.0129 (+13 %) | 0.0134 (+18 %) |
+| 500 | 0.0102 (+9 %) | **0.0094** | 0.0103 (+10 %) | 0.0105 (+12 %) |
+| 750 | 0.0100 (+19 %) | **0.0084** | 0.0096 (+14 %) | 0.0101 (+20 %) |
+| 1,000 | 0.0087 (+30 %) | **0.0067** | 0.0081 (+21 %) | 0.0093 (+39 %) |
+| 1,250 | 0.0082 (+32 %)\* | **0.0062**\* | 0.0075 (+21 %)\* | 0.0091 (+47 %) |
+| 1,500 | 0.0078 (+37 %) | **0.0057** | 0.0070 (+23 %) | 0.0101 (+77 %), 2 pods |
+| 2,000 | 0.0071 (+42 %) | **0.0050** | 0.0062 (+24 %) | 0.0093 (+86 %), 2 pods |
+| 2,500 | 0.0082 (+86 %), 2 pods | **0.0044** | 0.0056 (+27 %) | 0.0091 (×2.1), 2 pods |
+| 3,000 | 0.0078 (+95 %), 2 pods | **0.0040** | 0.0070 (+75 %), 2 pods | 0.0093 (×2.3), 3 pods |
+| 3,500 | 0.0074 (×2.0), 2 pods | **0.0037** | 0.0066 (+78 %), 2 pods | 0.0091 (×2.5), 3 pods |
+| 4,000 | 0.0071 (×2.0), 2 pods | **0.0035** | 0.0062 (+77 %), 2 pods | 0.0093 (×2.7), 4 pods |
+| 4,500 | 0.0078 (×2.4), 3 pods | **0.0032** | 0.0059 (+84 %), 2 pods | 0.0092 (×2.9), 4 pods |
+| 5,000 | 0.0075 (×2.5), 3 pods | **0.0030** | 0.0056 (+87 %), 2 pods | 0.0091 (×3.0), 4 pods |
+| 5,500 | 0.0073 (×2.6), 3 pods | **0.0028** | 0.0064 (×2.3), 3 pods | 0.0092 (×3.3), 5 pods |
+| 6,000 | 0.0071 (+78 %), 3 pods | **0.0040**, 2 pods | 0.0062 (+55 %), 3 pods | 0.0091 (×2.3), 5 pods |
+| 7,000 | 0.0074 (×2.0), 4 pods | **0.0037**, 2 pods | 0.0058 (+57 %), 3 pods | 0.0091 (×2.5), 6 pods |
+| 8,000 | 0.0071 (×2.0), 4 pods | **0.0035**, 2 pods | 0.0062 (+77 %), 4 pods | 0.0092 (×2.6), 7 pods |
+| 9,000 | 0.0074 (×2.3), 5 pods | **0.0032**, 2 pods | 0.0059 (+84 %), 4 pods | 0.0092 (×2.9), 8 pods |
+| 10,000 | 0.0071 (×2.4), 5 pods | **0.0030**, 2 pods | 0.0056 (+87 %), 4 pods | 0.0091 (×3.0), 8 pods |
+
+**How to read the table.** Plain values are **measured**. A star (\*) marks a value **interpolated**
+between two measured rates (log-log). A value followed by **"n pods"** is **extrapolated**: above its
+optimum a runtime was not measured, so the load is split evenly over the smallest number of pods that
+keeps every pod at or below the optimum, and the price is the one measured (or interpolated) at that
+per-pod rate. The extrapolation assumes perfect load balancing and **no fixed cost per pod** (no
+orchestration, monitoring or licensing overhead), which favors runtimes that need many pods. A step that
+failed the validation rule is never used as a data point; the extrapolation starts above each runtime's
+optimum (quarkus3-virtual failed the rule at 6000 req/s in two attempts, which is why its line is
+extrapolated from there).
+
+Optimum of each runtime (highest validated rate), with the share of RAM in its cost:
+
+| Runtime | Optimum (req/s) | USD per 1M requests | Increase over the best | RAM share of the cost at 10 req/s | RAM share at the optimum |
+|---|---|---|---|---|---|
+| quarkus3-virtual | **5500** | **0.0028** | best | 63% | 2% |
+| spring4-virtual | 2500 | 0.0056 | ×2.0 | 61% | 3% |
+| quarkus3-native | 2000 | 0.0071 | ×2.5 | 43% | 1% |
+| nodejs-orm | 1250 | 0.0091 | ×3.2 | 54% | 3% |
+
+![Cost of one million requests vs request rate](density-cost-per-request.svg)
+
+The chart shows the four runtimes with both axes logarithmic; solid lines are measured, dotted lines
+with hollow markers are extrapolated. Regenerate it with
+`./density-cost-per-request.py` (the values are transcribed from the table above).
+
+### What drives the ranking
+
+- **At low load, memory becomes the main cost factor.** A runtime that serves 10 requests per second
+  uses almost no CPU (1.7 to 2.4% of a core here), so what you pay for is the memory it holds: RAM is
+  43 to 63% of the cost at 10 req/s, against 1 to 3% at the optimum. The native binary holds about
+  150 MB of RSS, against 300 to 420 MB for the JVM and Node.js runtimes, so it is the cheapest at 10 and
+  50 req/s. As the rate increases, CPU per request takes over and quarkus3-virtual becomes the cheapest at
+  every rate from 100 req/s up.
+- **The ranking depends heavily on the price of a vCPU and of a GB of RAM.** The table is computed with
+  the Azure rates above, where RAM is cheap relative to CPU. The relative weight of the two decides who
+  wins at low load. Recomputing the measured points with a RAM price multiplied by a factor, the native
+  binary catches up with quarkus3-virtual at about **1.7x** the Azure RAM price at 100 req/s, at roughly
+  **3 to 4x** at 250 and 500 req/s and at about **9x** at 750 req/s; from 1000 req/s up it would need more
+  than **12x**. In other words, a RAM that is only a few times more expensive (as in some private-cloud or
+  chargeback models) is enough to keep quarkus3-native the cheapest up to a few hundred requests per
+  second, but not at high load: its CPU cost per request is higher (about 33 to 48% more CPU than
+  quarkus3-virtual between 1000 and 2000 req/s), and that gap dominates when memory is a small part of the bill.
+- **Spring Boot versus quarkus3-virtual**: as long as both run in a single pod (100 to 2500 req/s),
+  spring4-virtual costs 9 to 29% more per request. The gap widens sharply once it needs a second pod: quarkus3-virtual
+  sustains 5500 req/s on one pod against 2500 for spring4-virtual, so at 10,000 req/s the same load takes
+  2 pods against 4 and costs about twice as much.
+- **Node.js** stays close to the JVM runtimes at low load but its single event loop does not use the
+  second core, and it stops validating around 1250 req/s.
+
+### Caveats
+
+- Everything ran on the shared virtualized machine described in *Known caveats*. Close to a runtime's
+  limit the result of a step varies from one attempt to the next, so the optimums are accurate to about one
+  step and a dedicated machine would be needed to tighten them.
+- At 10 req/s the 30-second window holds only 300 requests: the price (dominated by RSS) is stable, the p99
+  is not statistically meaningful.
+- Values marked with a star or "pods" are not measurements, see above.
+- quarkus3-virtual and spring4-virtual both sample 10% of the traces (the other runtimes were not checked
+  for this section); the instrumentation is not identical (spring4-virtual adds JDBC and Logback
+  instrumentation).
+
 ## Runs
 
 | File | Start (UTC) | Runtimes | Iter. | JVM config | Scenario |
